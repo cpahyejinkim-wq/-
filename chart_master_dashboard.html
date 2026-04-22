@@ -1,0 +1,1559 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chart Master Terminal · 차트 마스터반 스크리닝 대시보드</title>
+<style>
+  :root {
+    --bg-0: #070A14;
+    --bg-1: #0E1324;
+    --bg-2: #151B30;
+    --bg-3: #1C2340;
+    --border: #262E4A;
+    --border-soft: #1F2640;
+    --text-1: #E8EAED;
+    --text-2: #A0A7C0;
+    --text-3: #6B7390;
+    --text-4: #4A5070;
+    --gold: #F4B942;
+    --gold-d: #C08D24;
+    --gold-soft: #FFD477;
+    --up: #F04848;
+    --down: #3B8BD4;
+    --green: #00D395;
+    --red: #F04848;
+    --grade-a: #00D395;
+    --grade-b: #F4B942;
+    --grade-c: #F07A2E;
+    --grade-d: #6B7390;
+    --mono: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+    --sans: 'Pretendard', 'Pretendard Variable', -apple-system, BlinkMacSystemFont,
+            'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕',
+            'Noto Sans KR', 'Noto Sans CJK KR', sans-serif;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    background: var(--bg-0);
+    color: var(--text-1);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  body {
+    background-image:
+      radial-gradient(circle at 20% 10%, rgba(244, 185, 66, 0.04) 0%, transparent 40%),
+      radial-gradient(circle at 80% 80%, rgba(59, 139, 212, 0.03) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+  .mono { font-family: var(--mono); font-feature-settings: 'tnum' 1; }
+
+  /* ============ Header ============ */
+  .header {
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+  .header-top {
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border-soft);
+  }
+  .brand { display: flex; align-items: center; gap: 14px; }
+  .brand-mark {
+    width: 32px; height: 32px;
+    background: var(--gold);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-weight: 700; font-size: 16px;
+    color: var(--bg-0);
+    position: relative;
+    clip-path: polygon(0 0, 100% 0, 100% 75%, 75% 100%, 0 100%);
+  }
+  .brand-text h1 {
+    font-size: 16px; font-weight: 700;
+    letter-spacing: 0.04em;
+    font-family: var(--mono);
+    color: var(--text-1);
+  }
+  .brand-text h1 span { color: var(--gold); }
+  .brand-text p {
+    font-size: 11px; color: var(--text-3);
+    margin-top: 2px; letter-spacing: 0.02em;
+  }
+  .status-strip { display: flex; align-items: center; gap: 24px; font-size: 12px; }
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 12px var(--green);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .status-item { display: flex; align-items: center; gap: 8px; color: var(--text-2); }
+  .status-item b { color: var(--text-1); font-family: var(--mono); }
+
+  /* ============ KPI Strip ============ */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid var(--border);
+  }
+  .kpi {
+    padding: 16px 20px;
+    border-right: 1px solid var(--border-soft);
+    position: relative;
+  }
+  .kpi:last-child { border-right: none; }
+  .kpi-label {
+    font-size: 10px;
+    color: var(--text-3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    font-family: var(--mono);
+    font-weight: 500;
+  }
+  .kpi-value {
+    font-family: var(--mono);
+    font-size: 24px;
+    font-weight: 600;
+    margin-top: 4px;
+    letter-spacing: -0.02em;
+    color: var(--text-1);
+  }
+  .kpi-sub {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+  .kpi[data-grade="A"] .kpi-value { color: var(--grade-a); }
+  .kpi[data-grade="B"] .kpi-value { color: var(--grade-b); }
+  .kpi[data-grade="C"] .kpi-value { color: var(--grade-c); }
+  .kpi[data-grade="D"] .kpi-value { color: var(--grade-d); }
+  .kpi-sparkle {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    opacity: 0;
+  }
+  .kpi:hover .kpi-sparkle { opacity: 1; transition: opacity 0.3s; }
+
+  /* ============ Tabs ============ */
+  .tabs {
+    display: flex;
+    padding: 0 32px;
+    background: var(--bg-1);
+    border-bottom: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 14px 20px;
+    font-size: 13px;
+    color: var(--text-2);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    font-family: var(--mono);
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    transition: all 0.15s;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .tab:hover { color: var(--text-1); }
+  .tab.active {
+    color: var(--gold);
+    border-bottom-color: var(--gold);
+  }
+  .tab .idx {
+    font-size: 10px;
+    color: var(--text-4);
+  }
+  .tab.active .idx { color: var(--gold-d); }
+
+  /* ============ Main ============ */
+  main { padding: 24px 32px; max-width: 1600px; margin: 0 auto; }
+  section.panel { display: none; animation: fadeUp 0.3s ease-out; }
+  section.panel.active { display: block; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ============ Cards ============ */
+  .card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    padding: 20px 24px;
+    position: relative;
+  }
+  .card-title {
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-weight: 500;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .card-title .card-badge {
+    padding: 2px 8px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--gold);
+    letter-spacing: 0.05em;
+  }
+
+  /* ============ Dashboard Layout ============ */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .dash-grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1.5fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .chart-wrap { position: relative; height: 260px; }
+
+  /* ============ Grade Badge ============ */
+  .grade {
+    display: inline-flex;
+    align-items: center; justify-content: center;
+    width: 28px; height: 20px;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+  }
+  .grade.A { background: var(--grade-a); color: #062818; }
+  .grade.B { background: var(--grade-b); color: #3D2404; }
+  .grade.C { background: var(--grade-c); color: #3D1505; }
+  .grade.D { background: var(--grade-d); color: #131824; }
+
+  .stage-pill {
+    font-size: 10px;
+    padding: 2px 8px;
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+  .stage-pill[data-stage="1"] { color: var(--green); border-color: var(--green); }
+  .stage-pill[data-stage="2"] { color: var(--gold); border-color: var(--gold); }
+  .stage-pill[data-stage="3"] { color: var(--gold-soft); border-color: var(--gold-d); }
+  .stage-pill[data-stage="4"] { color: var(--text-2); }
+  .stage-pill[data-stage="5"] { color: var(--red); border-color: var(--red); }
+
+  /* ============ Top list ============ */
+  .top-list { display: flex; flex-direction: column; }
+  .top-item {
+    display: grid;
+    grid-template-columns: 24px 1fr auto auto;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-soft);
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .top-item:hover { background: var(--bg-2); padding-left: 8px; padding-right: 8px; margin: 0 -8px; }
+  .top-item:last-child { border-bottom: none; }
+  .top-rank {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-4);
+    font-weight: 500;
+  }
+  .top-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-1);
+  }
+  .top-sub {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 1px;
+  }
+  .top-change {
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 500;
+    text-align: right;
+  }
+  .top-change.up { color: var(--up); }
+
+  /* ============ Table ============ */
+  .toolbar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .search-input {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    padding: 8px 14px;
+    color: var(--text-1);
+    font-family: var(--sans);
+    font-size: 13px;
+    flex: 1;
+    min-width: 200px;
+    outline: none;
+    transition: border 0.15s;
+  }
+  .search-input:focus { border-color: var(--gold); }
+  .filter-group { display: flex; gap: 4px; }
+  .filter-btn {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    padding: 7px 12px;
+    color: var(--text-2);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.1s;
+    letter-spacing: 0.04em;
+  }
+  .filter-btn:hover { color: var(--text-1); border-color: var(--text-3); }
+  .filter-btn.active {
+    background: var(--gold);
+    color: var(--bg-0);
+    border-color: var(--gold);
+    font-weight: 700;
+  }
+  .table-wrap {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  th {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    padding: 12px 14px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+    position: sticky; top: 0;
+  }
+  th:hover { color: var(--gold); }
+  th.sorted { color: var(--gold); }
+  th.sorted::after {
+    content: '▾';
+    margin-left: 4px;
+    font-size: 10px;
+  }
+  th.sorted.asc::after { content: '▴'; }
+  td {
+    padding: 11px 14px;
+    border-bottom: 1px solid var(--border-soft);
+    color: var(--text-1);
+    white-space: nowrap;
+  }
+  tbody tr:hover { background: var(--bg-2); }
+  tbody tr { transition: background 0.1s; }
+  .cell-num {
+    font-family: var(--mono);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .cell-change.up { color: var(--up); }
+  .cell-change.down { color: var(--down); }
+  .cell-score {
+    font-family: var(--mono);
+    font-weight: 600;
+  }
+  .pattern-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    font-family: var(--mono);
+    letter-spacing: 0.03em;
+  }
+  .timing-text {
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text-2);
+  }
+  .timing-text[data-priority="high"] { color: var(--gold-soft); font-weight: 600; }
+  .timing-text[data-priority="skip"] { color: var(--red); }
+
+  /* ============ T바닥 Chart Section ============ */
+  .tbottom-layout {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+  }
+  .chart-main-wrap {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    padding: 24px;
+  }
+  .chart-svg-container { width: 100%; overflow-x: auto; }
+  .chart-svg-container svg {
+    display: block;
+    width: 100%;
+    max-width: 720px;
+    height: auto;
+    margin: 0 auto;
+  }
+  .entry-points-list { display: flex; flex-direction: column; gap: 10px; }
+  .entry-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    padding: 14px 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .entry-card:hover,
+  .entry-card.focused {
+    border-color: var(--gold);
+    background: var(--bg-2);
+  }
+  .entry-card.focused {
+    box-shadow: 0 0 0 1px var(--gold) inset, 0 0 20px rgba(244, 185, 66, 0.15);
+  }
+  .entry-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .entry-no {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    background: #FAEEDA;
+    border: 2px solid var(--gold-d);
+    color: #633806;
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .entry-name { font-weight: 600; color: var(--text-1); font-size: 13px; }
+  .entry-cond { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+  .entry-meta { display: flex; gap: 16px; font-size: 11px; font-family: var(--mono); }
+  .entry-meta span { color: var(--text-3); }
+  .entry-meta b { color: var(--gold-soft); font-weight: 500; }
+
+  /* ============ Patterns ============ */
+  .pattern-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 12px;
+  }
+  .pattern-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    padding: 18px 20px;
+    position: relative;
+  }
+  .pattern-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gold);
+  }
+  .pattern-card[data-cat="바닥"]::before { background: var(--green); }
+  .pattern-card[data-cat="진행"]::before { background: var(--gold); }
+  .pattern-card[data-cat="돌파"]::before { background: var(--grade-c); }
+  .pattern-card[data-cat="조정"]::before { background: var(--down); }
+  .pattern-card[data-cat="복합"]::before { background: linear-gradient(90deg, var(--green), var(--gold)); }
+  .pattern-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .pattern-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-1);
+  }
+  .pattern-cat {
+    font-size: 10px;
+    padding: 2px 8px;
+    background: var(--bg-3);
+    color: var(--text-2);
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+  }
+  .pattern-score-bar {
+    height: 3px;
+    background: var(--bg-3);
+    margin: 10px 0;
+    position: relative;
+  }
+  .pattern-score-fill {
+    height: 100%;
+    background: var(--gold);
+    transition: width 0.4s;
+  }
+  .pattern-score-text {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text-3);
+    letter-spacing: 0.05em;
+  }
+  .pattern-desc {
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.6;
+    margin: 10px 0;
+  }
+  .pattern-entry {
+    font-size: 11px;
+    padding: 8px 10px;
+    background: var(--bg-2);
+    border-left: 2px solid var(--gold);
+    color: var(--gold-soft);
+    margin: 8px 0;
+    font-family: var(--mono);
+  }
+  .pattern-examples {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: var(--mono);
+    margin-top: 10px;
+  }
+  .pattern-examples b { color: var(--text-2); }
+
+  /* ============ Themes ============ */
+  .theme-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+  }
+  .theme-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+  .theme-card::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 4px;
+  }
+  .theme-card[data-theme-color] .theme-bar { height: 4px; margin-bottom: 14px; }
+  .theme-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .theme-name { font-size: 16px; font-weight: 700; color: var(--text-1); }
+  .theme-priority {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 12px;
+    width: 28px; height: 22px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .theme-priority.A { background: var(--grade-a); color: #062818; }
+  .theme-priority.B { background: var(--grade-b); color: #3D2404; }
+  .theme-priority.C { background: var(--grade-c); color: #3D1505; }
+  .theme-cycle {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+  .theme-subs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 14px;
+  }
+  .theme-sub {
+    font-size: 11px;
+    padding: 3px 9px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    color: var(--text-2);
+    font-family: var(--mono);
+  }
+
+  /* ============ Searches (HTS) ============ */
+  .search-list { display: flex; flex-direction: column; gap: 10px; }
+  .search-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    overflow: hidden;
+  }
+  .search-head {
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .search-head:hover { background: var(--bg-2); }
+  .search-no {
+    font-family: var(--mono);
+    font-weight: 700;
+    color: var(--gold);
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    min-width: 34px;
+  }
+  .search-info { flex: 1; }
+  .search-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-1);
+    margin-bottom: 2px;
+  }
+  .search-desc {
+    font-size: 12px;
+    color: var(--text-3);
+  }
+  .search-toggle {
+    color: var(--text-3);
+    font-size: 18px;
+    transition: transform 0.2s;
+  }
+  .search-card.open .search-toggle { transform: rotate(45deg); color: var(--gold); }
+  .search-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    border-top: 1px solid transparent;
+  }
+  .search-card.open .search-body {
+    max-height: 600px;
+    border-top-color: var(--border-soft);
+  }
+  .search-criteria {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 1px;
+    background: var(--border-soft);
+  }
+  .search-criteria > div {
+    background: var(--bg-1);
+    padding: 10px 16px;
+    font-size: 12px;
+  }
+  .search-criteria > div:nth-child(odd) {
+    color: var(--text-3);
+    font-family: var(--mono);
+    font-weight: 500;
+    letter-spacing: 0.03em;
+    background: var(--bg-2);
+  }
+  .search-criteria > div:nth-child(even) { color: var(--text-1); }
+
+  /* ============ Checklist ============ */
+  .checklist-wrap {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 16px;
+  }
+  .check-group {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    margin-bottom: 10px;
+  }
+  .check-group-head {
+    padding: 10px 18px;
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border-soft);
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: var(--gold);
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .check-group-count {
+    color: var(--text-3);
+    font-weight: 400;
+  }
+  .check-item {
+    padding: 11px 18px;
+    border-bottom: 1px solid var(--border-soft);
+    display: grid;
+    grid-template-columns: 32px 1fr 1.2fr;
+    gap: 12px;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.1s;
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-item:hover { background: var(--bg-2); }
+  .check-item.checked .check-label {
+    color: var(--text-3);
+    text-decoration: line-through;
+  }
+  .checkbox {
+    width: 18px; height: 18px;
+    border: 1.5px solid var(--text-4);
+    background: transparent;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .check-item.checked .checkbox {
+    background: var(--green);
+    border-color: var(--green);
+  }
+  .check-item.checked .checkbox::after {
+    content: '✓';
+    color: var(--bg-0);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .check-label { font-size: 13px; color: var(--text-1); font-weight: 500; }
+  .check-std { font-size: 12px; color: var(--text-3); font-family: var(--mono); }
+
+  .verdict-card {
+    background: var(--bg-1);
+    border: 1px solid var(--border);
+    padding: 24px;
+    position: sticky;
+    top: 200px;
+  }
+  .verdict-big {
+    font-family: var(--mono);
+    font-size: 64px;
+    font-weight: 700;
+    text-align: center;
+    color: var(--gold);
+    line-height: 1;
+    margin: 16px 0;
+    letter-spacing: -0.03em;
+  }
+  .verdict-label {
+    text-align: center;
+    color: var(--text-3);
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    font-family: var(--mono);
+    text-transform: uppercase;
+  }
+  .verdict-meter {
+    height: 8px;
+    background: var(--bg-3);
+    margin: 20px 0;
+    position: relative;
+    overflow: hidden;
+  }
+  .verdict-meter-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--red) 0%, var(--gold) 50%, var(--green) 100%);
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 0%;
+  }
+  .verdict-verdict {
+    text-align: center;
+    margin-top: 20px;
+    padding: 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    font-family: var(--mono);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    font-size: 14px;
+  }
+  .verdict-verdict[data-verdict="buy"] { color: var(--green); border-color: var(--green); }
+  .verdict-verdict[data-verdict="watch"] { color: var(--gold); border-color: var(--gold); }
+  .verdict-verdict[data-verdict="hold"] { color: var(--text-3); }
+  .verdict-reset {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-3);
+    padding: 8px 14px;
+    font-family: var(--mono);
+    font-size: 11px;
+    cursor: pointer;
+    margin-top: 16px;
+    width: 100%;
+    letter-spacing: 0.05em;
+    transition: all 0.15s;
+  }
+  .verdict-reset:hover { color: var(--text-1); border-color: var(--text-3); }
+
+  /* ============ Scrollbar ============ */
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: var(--bg-1); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-4); }
+
+  /* ============ Responsive ============ */
+  @media (max-width: 1200px) {
+    .dash-grid { grid-template-columns: 1fr 1fr; }
+    .dash-grid-2 { grid-template-columns: 1fr; }
+    .tbottom-layout { grid-template-columns: 1fr; }
+    .checklist-wrap { grid-template-columns: 1fr; }
+    .verdict-card { position: relative; top: 0; }
+  }
+  @media (max-width: 768px) {
+    .kpi-strip { grid-template-columns: repeat(3, 1fr); }
+    .dash-grid { grid-template-columns: 1fr; }
+    main, .header-top { padding: 16px; }
+    .brand-text h1 { font-size: 14px; }
+    table { font-size: 12px; }
+    th, td { padding: 8px 10px; }
+  }
+
+  footer {
+    padding: 32px;
+    text-align: center;
+    color: var(--text-4);
+    font-size: 11px;
+    font-family: var(--mono);
+    letter-spacing: 0.08em;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-top">
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <div class="brand-text">
+        <h1>CHART MASTER <span>TERMINAL</span></h1>
+        <p>T-Bottom Entry Framework · Semiconductor Screening v1.0</p>
+      </div>
+    </div>
+    <div class="status-strip">
+      <div class="status-item"><span class="status-dot"></span>LIVE</div>
+      <div class="status-item">마지막 업데이트 <b id="clock">—</b></div>
+      <div class="status-item">세션 <b>KST</b></div>
+    </div>
+  </div>
+
+  <div class="kpi-strip">
+    <div class="kpi">
+      <div class="kpi-sparkle"></div>
+      <div class="kpi-label">Total Stocks</div>
+      <div class="kpi-value" id="kpi-total">0</div>
+      <div class="kpi-sub">반도체 섹션</div>
+    </div>
+    <div class="kpi" data-grade="A">
+      <div class="kpi-sparkle"></div>
+      <div class="kpi-label">Grade A</div>
+      <div class="kpi-value" id="kpi-a">0</div>
+      <div class="kpi-sub">즉시 검토</div>
+    </div>
+    <div class="kpi" data-grade="B">
+      <div class="kpi-sparkle"></div>
+      <div class="kpi-label">Grade B</div>
+      <div class="kpi-value" id="kpi-b">0</div>
+      <div class="kpi-sub">적극 관찰</div>
+    </div>
+    <div class="kpi" data-grade="C">
+      <div class="kpi-sparkle"></div>
+      <div class="kpi-label">Grade C</div>
+      <div class="kpi-value" id="kpi-c">0</div>
+      <div class="kpi-sub">관망</div>
+    </div>
+    <div class="kpi" data-grade="D">
+      <div class="kpi-sparkle"></div>
+      <div class="kpi-label">Grade D</div>
+      <div class="kpi-value" id="kpi-d">0</div>
+      <div class="kpi-sub">제외/미입력</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-sparkle"></div>
+      <div class="kpi-label">Avg Score</div>
+      <div class="kpi-value mono" id="kpi-avg">0</div>
+      <div class="kpi-sub">만점 22</div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-sparkle"></div>
+      <div class="kpi-label">Watchlist</div>
+      <div class="kpi-value" id="kpi-watch" style="color:var(--gold)">0</div>
+      <div class="kpi-sub">도지 · 포킹 · 펌핑</div>
+    </div>
+  </div>
+
+  <nav class="tabs">
+    <div class="tab active" data-tab="dashboard"><span class="idx">01</span>대시보드</div>
+    <div class="tab" data-tab="screening"><span class="idx">02</span>스크리닝</div>
+    <div class="tab" data-tab="tbottom"><span class="idx">03</span>T바닥 엔트리</div>
+    <div class="tab" data-tab="patterns"><span class="idx">04</span>차트 패턴 12종</div>
+    <div class="tab" data-tab="themes"><span class="idx">05</span>탑다운 테마맵</div>
+    <div class="tab" data-tab="searches"><span class="idx">06</span>HTS 검색식</div>
+    <div class="tab" data-tab="checklist"><span class="idx">07</span>매수 체크리스트</div>
+  </nav>
+</header>
+
+<main>
+
+<!-- ============ 01. Dashboard ============ -->
+<section class="panel active" id="p-dashboard">
+  <div class="dash-grid">
+    <div class="card">
+      <div class="card-title">등급 분포 <span class="card-badge">GRADE</span></div>
+      <div class="chart-wrap" id="chart-grades"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">T바닥 단계 분포 <span class="card-badge">STAGE</span></div>
+      <div class="chart-wrap" id="chart-stages"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">시총대 분포 <span class="card-badge">MKT CAP</span></div>
+      <div class="chart-wrap" id="chart-caps"></div>
+    </div>
+  </div>
+
+  <div class="dash-grid-2">
+    <div class="card">
+      <div class="card-title">Top 10 종합 점수 <span class="card-badge">RANK</span></div>
+      <div class="top-list" id="top-list"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">권장 매수 후보 · 도지/포킹 단계 <span class="card-badge">★ BUY ZONE</span></div>
+      <div class="top-list" id="buy-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 02. Screening ============ -->
+<section class="panel" id="p-screening">
+  <div class="toolbar">
+    <input type="text" class="search-input" id="search-box" placeholder="종목명 검색... (예: DB하이텍, 한미반도체)">
+    <div class="filter-group">
+      <button class="filter-btn active" data-filter-grade="all">ALL</button>
+      <button class="filter-btn" data-filter-grade="A">A</button>
+      <button class="filter-btn" data-filter-grade="B">B</button>
+      <button class="filter-btn" data-filter-grade="C">C</button>
+      <button class="filter-btn" data-filter-grade="D">D</button>
+    </div>
+    <div class="filter-group">
+      <button class="filter-btn active" data-filter-stage="all">전체단계</button>
+      <button class="filter-btn" data-filter-stage="1">도지</button>
+      <button class="filter-btn" data-filter-stage="2">포킹</button>
+      <button class="filter-btn" data-filter-stage="3">펌핑</button>
+      <button class="filter-btn" data-filter-stage="4">랠리</button>
+      <button class="filter-btn" data-filter-stage="5">과열</button>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table id="stock-table">
+      <thead>
+        <tr>
+          <th data-sort="no">#</th>
+          <th data-sort="name">종목명</th>
+          <th data-sort="market">시장</th>
+          <th data-sort="cap" class="mono">시가총액</th>
+          <th data-sort="pattern">패턴</th>
+          <th data-sort="change" class="mono">돌파률</th>
+          <th data-sort="stage">단계</th>
+          <th data-sort="total" class="sorted mono">점수</th>
+          <th data-sort="grade">등급</th>
+          <th data-sort="timing">타이밍</th>
+        </tr>
+      </thead>
+      <tbody id="stock-tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ============ 03. T-Bottom ============ -->
+<section class="panel" id="p-tbottom">
+  <div class="tbottom-layout">
+    <div class="chart-main-wrap">
+      <div class="card-title">T바닥 진행 사이클 · 5개 매수 타점</div>
+      <div class="chart-svg-container" id="chart-svg-box"></div>
+    </div>
+    <div>
+      <div class="card-title" style="margin-left: 4px">매수 타점 상세</div>
+      <div class="entry-points-list" id="entry-list"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 04. Patterns ============ -->
+<section class="panel" id="p-patterns">
+  <div class="toolbar">
+    <div class="filter-group">
+      <button class="filter-btn active" data-filter-cat="all">전체</button>
+      <button class="filter-btn" data-filter-cat="바닥">바닥</button>
+      <button class="filter-btn" data-filter-cat="진행">진행</button>
+      <button class="filter-btn" data-filter-cat="돌파">돌파</button>
+      <button class="filter-btn" data-filter-cat="조정">조정</button>
+      <button class="filter-btn" data-filter-cat="복합">복합</button>
+    </div>
+  </div>
+  <div class="pattern-grid" id="pattern-grid"></div>
+</section>
+
+<!-- ============ 05. Themes ============ -->
+<section class="panel" id="p-themes">
+  <div class="theme-grid" id="theme-grid"></div>
+</section>
+
+<!-- ============ 06. Searches ============ -->
+<section class="panel" id="p-searches">
+  <div class="search-list" id="search-list"></div>
+</section>
+
+<!-- ============ 07. Checklist ============ -->
+<section class="panel" id="p-checklist">
+  <div class="checklist-wrap">
+    <div id="check-groups"></div>
+    <div class="verdict-card">
+      <div class="verdict-label">통과 항목</div>
+      <div class="verdict-big"><span id="v-num">0</span><span style="color:var(--text-4);font-size:32px">/20</span></div>
+      <div class="verdict-meter"><div class="verdict-meter-fill" id="v-meter"></div></div>
+      <div class="verdict-label" style="margin-bottom:8px">통과율 <span style="color:var(--gold)" id="v-pct">0</span>%</div>
+      <div class="verdict-verdict" data-verdict="hold" id="v-verdict">유보</div>
+      <button class="verdict-reset" id="reset-btn">전체 초기화</button>
+      <div style="margin-top:20px;padding-top:20px;border-top:1px solid var(--border-soft);font-size:11px;color:var(--text-3);line-height:1.7;font-family:var(--mono);letter-spacing:0.02em">
+        <div style="margin-bottom:6px">• 16+ 통과: <span style="color:var(--green)">★ 매수</span></div>
+        <div style="margin-bottom:6px">• 12-15: <span style="color:var(--gold)">관찰</span></div>
+        <div>• 11이하: <span style="color:var(--text-3)">유보</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  CHART MASTER TERMINAL · Built on 차트마스터반 2기 Curriculum · Data v2026.04 · Never financial advice
+</footer>
+
+<script>
+// ============ Data ============
+const DATA = {"stocks": [{"no": 1, "name": "두산", "market": "코스피", "cap": 99143, "timeframe": "주봉", "ma": 10, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "N자 상승 초입", "theme": "시스템반도체", "patScore": 1, "distScore": 0, "capScore": 3, "total": 4, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 2, "name": "한미반도체", "market": "코스피", "cap": 95598, "timeframe": "월봉", "ma": 10, "breakout": 86500, "current": 100300, "change": 15.95, "pattern": "정배탁", "forecast": "월봉1개", "note": "월봉 쌍바닥 100일 돌파 후 횡보구간", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 3, "total": 16, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 3, "name": "리노공업", "market": "코스닥", "cap": 40697, "timeframe": "월봉", "ma": 10, "breakout": 39600, "current": 53400, "change": 34.85, "pattern": "정배탁", "forecast": "", "note": "전고점 도달 돌파시 신고가", "theme": "반도체 장비", "patScore": 8, "distScore": 3, "capScore": 4, "total": 15, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 4, "name": "DB하이텍", "market": "코스피", "cap": 24908, "timeframe": "주봉", "ma": 240, "breakout": 51600, "current": 56100, "change": 8.72, "pattern": "정배탁", "forecast": "", "note": "240이평 돌파 후 횡보 구간 N자 지지받으면 진입", "theme": "시스템반도체", "patScore": 8, "distScore": 8, "capScore": 4, "total": 20, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 5, "name": "동진쎄미켐", "market": "코스닥", "cap": 24113, "timeframe": "주봉", "ma": null, "breakout": 26000, "current": 46900, "change": 80.38, "pattern": "정배탁", "forecast": "", "note": "240이평 아래 두고 N자 만들다", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 1, "capScore": 4, "total": 13, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 6, "name": "테크윙", "market": "코스닥", "cap": 23271, "timeframe": "주봉", "ma": null, "breakout": 32500, "current": 62300, "change": 91.69, "pattern": "정배탁", "forecast": "", "note": "전고점 70800 돌파시 신고가", "theme": "반도체 장비", "patScore": 8, "distScore": 1, "capScore": 4, "total": 13, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 7, "name": "솔브레인", "market": "코스닥", "cap": 22597, "timeframe": "주봉", "ma": null, "breakout": 243500, "current": 290500, "change": 19.3, "pattern": "정배탁", "forecast": "", "note": "쌍바닥으로 7차 상승 랠리 후 횡보", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 8, "name": "리벳카이", "market": "코스피", "cap": 21856, "timeframe": "주봉", "ma": 240, "breakout": 108400, "current": 137900, "change": 27.21, "pattern": "정배탁", "forecast": "", "note": "전고 141300 돌파시 신고가 지지받아야 함", "theme": "시스템반도체", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 9, "name": "ISC", "market": "코스닥", "cap": 17191, "timeframe": "월봉", "ma": 240, "breakout": 57000, "current": 81100, "change": 42.28, "pattern": "정배탁", "forecast": "", "note": "월봉 쌍바닥 되돌린 후 펌핑 구간", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 5, "total": 16, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 10, "name": "하나마이크론", "market": "코스닥", "cap": 16435, "timeframe": "주봉", "ma": 240, "breakout": 13970, "current": 24800, "change": 77.52, "pattern": "정배탁", "forecast": "", "note": "전고 29494점 향해 상승 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 5, "total": 16, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 11, "name": "에스앤에스텍", "market": "코스닥", "cap": 11391, "timeframe": "주봉", "ma": 240, "breakout": 32350, "current": 53100, "change": 64.14, "pattern": "정배탁", "forecast": "", "note": "240이평 돌파 후 N자 구간 되돌림 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 5, "total": 16, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 12, "name": "파두", "market": "코스닥", "cap": 11250, "timeframe": "주봉", "ma": null, "breakout": 11653, "current": 22750, "change": 95.23, "pattern": "정배탁", "forecast": "", "note": "전고점 부근 펌핑 그 다음 전고점 33576 공략", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 1, "capScore": 5, "total": 14, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 13, "name": "고영", "market": "코스닥", "cap": 10847, "timeframe": "주봉", "ma": null, "breakout": 14450, "current": 15800, "change": 9.34, "pattern": "정배탁", "forecast": "", "note": "월봉 7차 구간 진입", "theme": "반도체 장비", "patScore": 8, "distScore": 8, "capScore": 5, "total": 21, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 14, "name": "에이엔에스텍", "market": "코스닥", "cap": 10704, "timeframe": "주봉", "ma": null, "breakout": 32350, "current": 49900, "change": 54.25, "pattern": "정배탁", "forecast": "", "note": "240이평 돌파 후 가격 조정 중", "theme": "시스템반도체", "patScore": 8, "distScore": 3, "capScore": 5, "total": 16, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 15, "name": "피에스케이", "market": "코스닥", "cap": 9936, "timeframe": "주봉", "ma": null, "breakout": 18340, "current": 34300, "change": 87.02, "pattern": "정배탁", "forecast": "", "note": "전고 39100점 돌파시 신고가", "theme": "반도체 장비", "patScore": 8, "distScore": 1, "capScore": 5, "total": 14, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 16, "name": "LX세미콘", "market": "코스닥", "cap": 9141, "timeframe": "주봉", "ma": null, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "3중바닥 다지며 수렴 중 박스권 하단", "theme": "시스템반도체", "patScore": 1, "distScore": 0, "capScore": 5, "total": 6, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 17, "name": "이엔에프테크놀로지", "market": "코스닥", "cap": 8816, "timeframe": "월봉", "ma": 10, "breakout": 21900, "current": 61700, "change": 181.74, "pattern": "정배탁", "forecast": "", "note": "신고가 행진 중", "theme": "시스템반도체", "patScore": 8, "distScore": 1, "capScore": 5, "total": 14, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 18, "name": "두산테스나", "market": "코스닥", "cap": 8601, "timeframe": "주봉", "ma": null, "breakout": 38700, "current": 44500, "change": 14.99, "pattern": "정배탁", "forecast": "", "note": "전고 50000구간 돌파 지지받은 것", "theme": "시스템반도체", "patScore": 8, "distScore": 8, "capScore": 5, "total": 21, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 19, "name": "케이씨텍", "market": "코스닥", "cap": 8576, "timeframe": "주봉", "ma": 240, "breakout": 26200, "current": 41450, "change": 58.21, "pattern": "정배탁", "forecast": "", "note": "전고 52420 향해 순항 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 5, "total": 16, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 20, "name": "레이크머티리얼즈", "market": "코스닥", "cap": 8466, "timeframe": "주봉", "ma": null, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "240이평 지지받으며 기간조정 가격조정 후 상승 추세전환 확인 필요", "theme": "반도체 장비", "patScore": 1, "distScore": 0, "capScore": 5, "total": 6, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 21, "name": "에프에스티", "market": "코스닥", "cap": 7388, "timeframe": "주봉", "ma": null, "breakout": 21750, "current": 33650, "change": 54.71, "pattern": "정배탁", "forecast": "", "note": "240이평 돌파 후 양음양 머리 처음처럼", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 5, "total": 16, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 22, "name": "SFA반도체", "market": "코스닥", "cap": 7269, "timeframe": "주봉", "ma": null, "breakout": 3120, "current": 4420, "change": 41.67, "pattern": "정배탁", "forecast": "", "note": "양음양 머리 처음처럼 5300구간 240이평 돌파 관련", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 5, "total": 16, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 23, "name": "해성디에스", "market": "코스닥", "cap": 7234, "timeframe": "주봉", "ma": null, "breakout": 22450, "current": 42550, "change": 89.53, "pattern": "정배탁", "forecast": "", "note": "240이평 44145 한번 노크 후", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 1, "capScore": 5, "total": 14, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 24, "name": "원익QnC", "market": "코스닥", "cap": 7098, "timeframe": "주봉", "ma": null, "breakout": 24000, "current": 27000, "change": 12.5, "pattern": "정배탁", "forecast": "", "note": "240돌파 후 랠리 구간 진입 전고장 41000", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 8, "capScore": 5, "total": 21, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 25, "name": "후성", "market": "코스피", "cap": 6618, "timeframe": "월봉", "ma": 10, "breakout": 5512, "current": 6170, "change": 11.94, "pattern": "정배탁", "forecast": "", "note": "전저점 지지받으며 바닥에서 되돌림 후 펌핑 구간", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 8, "capScore": 5, "total": 21, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 26, "name": "시노펙스", "market": "코스닥", "cap": 6220, "timeframe": "월봉", "ma": 10, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "신고가 행진 중", "theme": "시스템반도체", "patScore": 1, "distScore": 0, "capScore": 5, "total": 6, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 27, "name": "가온칩스", "market": "코스닥", "cap": 5905, "timeframe": "월봉", "ma": 10, "breakout": 39150, "current": 50900, "change": 30.01, "pattern": "정배탁", "forecast": "", "note": "쌍바닥 후 원탁 3개월 후 랠리 구간 진입", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 5, "total": 16, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 28, "name": "미코", "market": "코스닥", "cap": 5437, "timeframe": "주봉", "ma": 240, "breakout": 9080, "current": 16270, "change": 79.19, "pattern": "정배탁", "forecast": "", "note": "전고점에서 양음양 머리 처음처럼", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 5, "total": 16, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 29, "name": "OCI", "market": "코스피", "cap": 5085, "timeframe": "주봉", "ma": 240, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "남은 쌍바닥의 기간조정 가격조정 마지막 구간으로 가는 중", "theme": "반도체 재료/부품", "patScore": 1, "distScore": 0, "capScore": 5, "total": 6, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 30, "name": "이녹스첨단소재", "market": "코스닥", "cap": 4915, "timeframe": "주봉", "ma": 240, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "수렴 중 월봉 바닥 다지고 상승 준비 중", "theme": "반도체 재료/부품", "patScore": 1, "distScore": 0, "capScore": 4, "total": 5, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 31, "name": "원익머트리얼즈", "market": "코스닥", "cap": 4488, "timeframe": "주봉", "ma": null, "breakout": 29430, "current": 35600, "change": 21.09, "pattern": "정배탁", "forecast": "", "note": "240이평 돌파 후 랠리 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 32, "name": "월덱스", "market": "코스닥", "cap": 4367, "timeframe": "주봉", "ma": null, "breakout": 21950, "current": 26450, "change": 20.5, "pattern": "정배탁", "forecast": "", "note": "240이평 돌파 후 머리 처음처럼 전고 29800 돌파 대기", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 33, "name": "샘씨엔에스", "market": "코스닥", "cap": 4356, "timeframe": "주봉", "ma": null, "breakout": 6000, "current": 7460, "change": 24.33, "pattern": "정배탁", "forecast": "", "note": "전고 8846를 향해 가고 있음", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 34, "name": "한솔아이원스", "market": "코스닥", "cap": 4060, "timeframe": "주봉", "ma": null, "breakout": 8730, "current": 14200, "change": 62.66, "pattern": "정배탁", "forecast": "", "note": "신고가 행진 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 4, "total": 15, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 35, "name": "네패스", "market": "코스닥", "cap": 3971, "timeframe": "주봉", "ma": null, "breakout": 11100, "current": 17220, "change": 55.14, "pattern": "정배탁", "forecast": "", "note": "240이평 20500까지 순항 할 것으로 예상", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 4, "total": 15, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 36, "name": "동운아네텍", "market": "코스닥", "cap": 3699, "timeframe": "주봉", "ma": null, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "2년째 횡보 중", "theme": "반도체 재료/부품", "patScore": 1, "distScore": 0, "capScore": 4, "total": 5, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 37, "name": "칩스앤미디어", "market": "코스닥", "cap": 3651, "timeframe": "월봉", "ma": 10, "breakout": 15100, "current": 19850, "change": 19.87, "pattern": "정배탁", "forecast": "", "note": "월봉 쌍바닥 되돌림", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 38, "name": "에이치브이엠로지", "market": "코스닥", "cap": 3616, "timeframe": "주봉", "ma": null, "breakout": 21050, "current": 24800, "change": 17.81, "pattern": "정배탁", "forecast": "", "note": "부활 월 특정 구간 거래 양음양이나 머리를 처들지는 않았다", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 39, "name": "에스앤엠엔티", "market": "코스닥", "cap": 3580, "timeframe": "주봉", "ma": null, "breakout": 3265, "current": 3580, "change": 9.65, "pattern": "정배탁", "forecast": "", "note": "전고 3900장비 가고 있음", "theme": "반도체 장비", "patScore": 8, "distScore": 8, "capScore": 4, "total": 20, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 40, "name": "에이치엠", "market": "코스피", "cap": 3490, "timeframe": "주봉", "ma": null, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "고점에 나다고 저점을 내리며 수렴 주가의 기간조정 막바지로 보임", "theme": "반도체 재료/부품", "patScore": 1, "distScore": 0, "capScore": 4, "total": 5, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 41, "name": "덕산테코피아", "market": "코스닥", "cap": 3456, "timeframe": "월봉", "ma": 10, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "월봉1개", "note": "월봉 쌍바닥 완성까지 1봉 전처럼 관찰 필요", "theme": "반도체 재료/부품", "patScore": 1, "distScore": 0, "capScore": 4, "total": 5, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 42, "name": "LB세미콘", "market": "코스닥", "cap": 3353, "timeframe": "주봉", "ma": 240, "breakout": 5980, "current": 7380, "change": 23.41, "pattern": "정배탁", "forecast": "", "note": "넓게 바닥을 다진 후 240이평 두번 뚜드린 후 돌파 한 것으로 관찰", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 43, "name": "덕산하이메탈", "market": "코스닥", "cap": 3322, "timeframe": "주봉", "ma": 240, "breakout": 3205, "current": 5720, "change": 78.47, "pattern": "정배탁", "forecast": "", "note": "240이평 8000구간까지 갈 것으로 예상", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 4, "total": 15, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 44, "name": "매커스", "market": "코스닥", "cap": 3312, "timeframe": "주봉", "ma": null, "breakout": 5900, "current": 7290, "change": 23.56, "pattern": "정배탁", "forecast": "", "note": "전고 8260 앞두고 검증 구간", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 45, "name": "에이치브이엠", "market": "코스닥", "cap": 3158, "timeframe": "주봉", "ma": null, "breakout": 9350, "current": 22300, "change": 138.5, "pattern": "정배탁", "forecast": "", "note": "월봉 2봉간 가격 조정 후 5이평 지지받고 상승", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 1, "capScore": 4, "total": 13, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 46, "name": "뉴욕리서치", "market": "코스닥", "cap": 3100, "timeframe": "주봉", "ma": null, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "240이평 돌파 후 갭 상승", "theme": "반도체 재료/부품", "patScore": 1, "distScore": 0, "capScore": 4, "total": 5, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 47, "name": "오픈엣지테크놀로지", "market": "코스닥", "cap": 2888, "timeframe": "주봉", "ma": null, "breakout": 5270, "current": 6610, "change": 25.43, "pattern": "정배탁", "forecast": "", "note": "240이평 돌파 후 갭 상승", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 48, "name": "한양디지텍", "market": "코스닥", "cap": 2886, "timeframe": "주봉", "ma": null, "breakout": 11400, "current": 13100, "change": 14.91, "pattern": "삼중바닥", "forecast": "정배탁", "note": "삼중바닥 다진 후 100일 돌파 하면서 상승 장악력으로 마감", "theme": "반도체 재료/부품", "patScore": 9, "distScore": 8, "capScore": 4, "total": 21, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 49, "name": "HLB이노베이션", "market": "코스닥", "cap": 2787, "timeframe": "주봉", "ma": null, "breakout": 9160, "current": 18280, "change": 99.56, "pattern": "정배탁", "forecast": "", "note": "전고 27000으로나 임금 후", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 1, "capScore": 4, "total": 13, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 50, "name": "미래반도체", "market": "코스닥", "cap": 2709, "timeframe": "주봉", "ma": null, "breakout": 1635, "current": 1877, "change": 14.8, "pattern": "정배탁", "forecast": "", "note": "240이평 23860 돌파 머리 처음처럼 절봉의 하반 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 8, "capScore": 4, "total": 20, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 51, "name": "엠케이전자", "market": "코스피", "cap": 2670, "timeframe": "주봉", "ma": null, "breakout": 16410, "current": 18490, "change": 12.68, "pattern": "정배탁", "forecast": "", "note": "상승장악한 월 그려 전고 23714 구간 돌파 관련", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 8, "capScore": 4, "total": 20, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 52, "name": "KPX지티", "market": "코스닥", "cap": 2386, "timeframe": "주봉", "ma": null, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "240이평 돌파 후 다시 펼어미 N자 구간 진입", "theme": "반도체 재료/부품", "patScore": 1, "distScore": 0, "capScore": 4, "total": 5, "grade": "D", "stage": "관찰", "timing": "관찰"}, {"no": 53, "name": "자람테크놀로지", "market": "코스닥", "cap": 2380, "timeframe": "주봉", "ma": null, "breakout": 36300, "current": 38400, "change": 5.79, "pattern": "정배탁", "forecast": "", "note": "가격조정 기간조정이 끝나가는 것 같음", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 8, "capScore": 4, "total": 20, "grade": "A", "stage": "2.포킹", "timing": "★★☆ 포킹 검증"}, {"no": 54, "name": "삼양엠텍", "market": "코스닥", "cap": 2380, "timeframe": "주봉", "ma": null, "breakout": 16330, "current": 21750, "change": 33.19, "pattern": "정배탁", "forecast": "", "note": "젊은 양학조정 추세전환 관련 후", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 4, "total": 15, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 55, "name": "어보브반도체", "market": "코스닥", "cap": 2374, "timeframe": "주봉", "ma": null, "breakout": 8150, "current": 13350, "change": 63.8, "pattern": "정배탁", "forecast": "", "note": "월봉으로 수렴 후 양음양 거래나 되돌리기 35일간 이어지는 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 4, "total": 15, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 56, "name": "칩인플러스반도체", "market": "코스닥", "cap": 2363, "timeframe": "주봉", "ma": null, "breakout": 12980, "current": 16770, "change": 29.2, "pattern": "삼중바닥", "forecast": "정배탁", "note": "100일 돌파 후 양음양 고개 처들고 전고점 저항 받고 있음", "theme": "반도체 재료/부품", "patScore": 9, "distScore": 5, "capScore": 4, "total": 18, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 57, "name": "티이엠씨", "market": "코스닥", "cap": 2363, "timeframe": "주봉", "ma": null, "breakout": 7050, "current": 11000, "change": 56.03, "pattern": "정배탁", "forecast": "", "note": "가격조정 후 우상향 중으로 상승 추세", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 4, "total": 15, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 58, "name": "케이엔제이", "market": "코스닥", "cap": 2363, "timeframe": "주봉", "ma": null, "breakout": 16250, "current": 29450, "change": 81.23, "pattern": "정배탁", "forecast": "", "note": "240이평 지지받은 가격조정 기간조정 후 대상승 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 1, "capScore": 4, "total": 13, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 59, "name": "와이씨켐", "market": "코스닥", "cap": 2356, "timeframe": "주봉", "ma": null, "breakout": 20200, "current": 23300, "change": 15.35, "pattern": "정배탁", "forecast": "", "note": "100일 돌파 후 양음양 머리 처들었음", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 5, "capScore": 4, "total": 17, "grade": "B", "stage": "3.펌핑", "timing": "★★☆ 음봉 매수"}, {"no": 60, "name": "사이언플루션", "market": "코스닥", "cap": 2335, "timeframe": "주봉", "ma": null, "breakout": 7480, "current": 9890, "change": 32.22, "pattern": "정배탁", "forecast": "", "note": "신고가행진 청배탁 패턴 청한 구간", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 4, "total": 15, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 61, "name": "사리엔드지", "market": "코스닥", "cap": 2328, "timeframe": "주봉", "ma": null, "breakout": 13890, "current": 28290, "change": 83.82, "pattern": "정배탁", "forecast": "", "note": "100일 돌파 후 우상향 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 1, "capScore": 4, "total": 13, "grade": "C", "stage": "5.과열", "timing": "☆☆☆ 추격 금지"}, {"no": 62, "name": "네메스시스", "market": "코스닥", "cap": 2313, "timeframe": "주봉", "ma": null, "breakout": 14200, "current": 18940, "change": 33.66, "pattern": "정배탁", "forecast": "", "note": "양음양 머리 처들었음 27500구간 240이평 돌파 관련", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 3, "capScore": 4, "total": 15, "grade": "B", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 63, "name": "아나패스", "market": "코스닥", "cap": 2273, "timeframe": "주봉", "ma": null, "breakout": 17900, "current": 18750, "change": 4.75, "pattern": "정배탁", "forecast": "", "note": "240이평 아래에서 세차례 노크하며 횡보 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 10, "capScore": 4, "total": 22, "grade": "A", "stage": "1.도지", "timing": "★★★ 도지 매수"}, {"no": 64, "name": "큐알티", "market": "코스닥", "cap": 2269, "timeframe": "주봉", "ma": null, "breakout": 12240, "current": 18460, "change": 50.82, "pattern": "삼중바닥", "forecast": "", "note": "삼중바닥 다진 후 100일 돌파 후 랠리 전고점 뚫음", "theme": "반도체 재료/부품", "patScore": 7, "distScore": 3, "capScore": 4, "total": 14, "grade": "C", "stage": "4.랠리", "timing": "★☆☆ 5이평 대기"}, {"no": 65, "name": "마이크로컨텍솔", "market": "코스닥", "cap": 2228, "timeframe": "주봉", "ma": null, "breakout": null, "current": null, "change": null, "pattern": "", "forecast": "", "note": "N자 상승초입 신고가 행진", "theme": "반도체 재료/부품", "patScore": 1, "distScore": 0, "capScore": 4, "total": 5, "grade": "D", "stage": "관찰", "timing": "관찰"}], "patterns": [{"name": "T바닥", "category": "바닥", "score": 8, "desc": "음봉 → 도지 → 포킹 돌파봉의 3봉 조합. 매도세를 매수세가 밀어올리는 추세 전환 기본형", "entry": "도지 자리 + 상승 돌파봉 완성 시", "examples": "원익IPS, 삼천당제약, LG전자"}, {"name": "쌍바닥(W)", "category": "바닥", "score": 6, "desc": "T바닥이 2회 형성되며 넥라인 돌파. T바닥과 본질 동일", "entry": "2차 저점 후 넥라인 돌파 시", "examples": "한미반도체 월봉"}, {"name": "대쌍바닥", "category": "바닥", "score": 7, "desc": "T바닥 → T봉 → T바닥 형태. 긴 밑꼬리 두 개가 급쌍바닥 역할", "entry": "브레이크봉 진입 시점", "examples": "삼천당제약, 알파벳A 월봉"}, {"name": "삼중바닥", "category": "바닥", "score": 7, "desc": "비슷한 저점에서 3회 반등하며 수렴. 박스권 상단 돌파가 신호", "entry": "박스권 상단(넥라인) 돌파", "examples": "한양디지텍, 큐알티"}, {"name": "컵앤핸들", "category": "바닥", "score": 6, "desc": "U자 형태 바닥 후 작은 되돌림(핸들) 후 본격 상승. 기관 매집 특징", "entry": "핸들 돌파 양봉", "examples": "비에이치, 티아거림"}, {"name": "골파기+밑꼬리", "category": "돌파", "score": 7, "desc": "긴 하락 후 긴 밑꼬리 캔들이 추세 전환 시그널", "entry": "장대양봉 완성 후 되돌림 시", "examples": "국도화학 주봉, LG전자 월봉"}, {"name": "펌핑+랠리", "category": "진행", "score": 8, "desc": "T바닥 완성 후 펌핑(단기 급등) → 조정 → 랠리 반복", "entry": "양음양 음봉 또는 5이평 지지 양봉", "examples": "아크릴, 파이버프로"}, {"name": "양음양", "category": "진행", "score": 7, "desc": "양봉 → 음봉 → 양봉 3봉. 돌파 후 확인 신호", "entry": "두 번째 양봉 출현 시", "examples": "SFA반도체, 파두"}, {"name": "N자 돌파 초입", "category": "돌파", "score": 5, "desc": "고점 돌파 후 되돌림, 재차 신고가 돌파 구조", "entry": "재돌파 양봉", "examples": "두산, 마이크로컨텍솔"}, {"name": "역매집 도지", "category": "조정", "score": 7, "desc": "랠리 후 조정 마지막 도지. 재상승 분기점", "entry": "역매집 도지 다음 양봉", "examples": "아이티센글로벌"}, {"name": "정배탁", "category": "진행", "score": 8, "desc": "5 > 10 > 20 > 60 > 120 이평 정배열. 차트마스터반 핵심 패턴", "entry": "이평선 근접 시 조정 매수", "examples": "한미반도체, 리노공업, 테크윙"}, {"name": "삼중바닥+정배탁", "category": "복합", "score": 9, "desc": "삼중바닥 후 정배열 전환. 가장 강력한 매수 신호", "entry": "정배열 전환 양봉", "examples": "한양디지텍, 칩인플러스반도체"}], "themes": [{"name": "반도체", "priority": "A", "cycle": "성장기", "subs": ["시스템반도체", "반도체 장비", "반도체 재료/부품", "HBM", "3D NAND", "온디바이스 AI", "유리기판", "뉴로모픽반도체"], "color": "#378ADD"}, {"name": "원전/전력설비", "priority": "A", "cycle": "성장기", "subs": ["원자력발전소 해체", "원자력발전", "전력설비", "전선", "핵융합에너지", "ESS", "풍력에너지"], "color": "#EF9F27"}, {"name": "방산/우주/항공", "priority": "A", "cycle": "성장기", "subs": ["우주항공", "항공기부품", "방위산업", "LCC 저가항공"], "color": "#7F77DD"}, {"name": "로봇", "priority": "A", "cycle": "초기", "subs": ["산업용/협동로봇", "지능형로봇/AI"], "color": "#5F5E5A"}, {"name": "바이오/제약", "priority": "B", "cycle": "초기~성장", "subs": ["비만치료제", "바이오시밀러", "백신/진단시약", "면역항암제", "줄기세포"], "color": "#D85A30"}, {"name": "2차전지", "priority": "B", "cycle": "조정기", "subs": ["LFP/리튬인산철", "전고체", "2차전지 소재/부품", "2차전지 생산", "나트륨이온", "2차전지 장비"], "color": "#97C459"}, {"name": "금융/핀테크", "priority": "B", "cycle": "성숙기", "subs": ["인터넷은행", "가상화폐", "전자결제"], "color": "#1D9E75"}, {"name": "지주사", "priority": "C", "cycle": "성숙기", "subs": ["SK", "LG", "한화", "CJ"], "color": "#888780"}], "searches": [{"no": 1, "title": "월봉 T바닥 후보 (대형주 중장기)", "desc": "시총 5천억 이상 월봉 T바닥 진입 후보", "criteria": [["시가총액", "5,000억 이상"], ["상장주식수", "500만주 이상"], ["월봉 저가", "최근 6개월 최저가 ±2%"], ["캔들 조합", "전월 음봉 + 당월 도지"], ["거래량", "당월 ≥ 전월"], ["이평", "주가 > 월봉 20MA"], ["제외", "PER음수/관리/경고"]]}, {"no": 2, "title": "주봉 포킹 돌파봉 (중형주 스윙)", "desc": "시총 1천억~1조 주봉 포킹 돌파 종목", "criteria": [["시가총액", "1,000억 ~ 1조"], ["당주", "양봉, 종가 > 20MA"], ["돌파", "종가 > 12주 고점"], ["포킹", "5·10·20MA 상향 관통"], ["거래량", "4주 평균 × 1.5"], ["양봉 몸통", "≥ 3%"], ["수급", "외국인·기관 4주 순매수"]]}, {"no": 3, "title": "일봉 양음양 5이평 지지 (단기 타점)", "desc": "재진입 포인트 포착", "criteria": [["D-2", "양봉"], ["D-1", "음봉, 종가 > 5MA"], ["D", "양봉"], ["정배열", "5>20>60MA"], ["저가", "5MA ±0.5%"], ["거래량", "20일 평균 × 0.8 이상"], ["상승률", "+3~8% (과열 회피)"]]}, {"no": 4, "title": "삼중바닥 돌파 (중장기 스윙)", "desc": "박스권 수렴 후 상단 돌파", "criteria": [["시총", "500억 이상"], ["저점", "90일 내 3회 ±3%"], ["박스 밴드", "15~30%"], ["돌파", "상단 +2% 이상"], ["거래량", "60일 평균 × 2"], ["재무", "흑자, 부채 <200%"], ["섹터", "성장 섹터"]]}, {"no": 5, "title": "역매집 도지 포착 (재진입)", "desc": "상승 후 조정 마지막 타점", "criteria": [["시총", "1,000억 이상"], ["전제", "3개월 30%+ 상승 이력"], ["현 상태", "고점 -10~25%"], ["캔들", "도지 (몸통 ≤0.5%)"], ["지지", "20MA 또는 60MA ±1%"], ["거래량", "20일 평균 × 0.6 미만"], ["꼬리", "아래꼬리 ≥ 몸통 ×2"]]}, {"no": 6, "title": "영웅문 0663 재무 필터", "desc": "펀더멘털 사전 검증", "criteria": [["매출 CAGR", "3년 > 5%"], ["영업이익률", "10% 이상"], ["ROE", "10% 이상"], ["부채비율", "≤ 150%"], ["유보율", "≥ 300%"], ["PER", "업종평균 80~130%"], ["현금흐름", "OCF > 순이익 ×0.8"]]}], "checklist": [{"stage": "매크로", "item": "금리 방향", "std": "FOMC·한은 기조 배치 아님"}, {"stage": "매크로", "item": "환율", "std": "원/달러 1400원 이하"}, {"stage": "매크로", "item": "유가/원자재", "std": "공급망 리스크 없음"}, {"stage": "섹터", "item": "섹터 사이클", "std": "탑다운 A등급"}, {"stage": "섹터", "item": "수급", "std": "외국인·기관 순매수"}, {"stage": "섹터", "item": "뉴스/이슈", "std": "악재 없음"}, {"stage": "펀더멘털", "item": "매출 성장", "std": "3년 CAGR 5%+"}, {"stage": "펀더멘털", "item": "영업이익률", "std": "10% 이상 또는 개선"}, {"stage": "펀더멘털", "item": "부채비율", "std": "150% 이하"}, {"stage": "펀더멘털", "item": "ROE", "std": "10% 이상"}, {"stage": "차트", "item": "월봉 추세", "std": "T바닥 이상"}, {"stage": "차트", "item": "주봉 정배열", "std": "5>10>20MA"}, {"stage": "차트", "item": "거래량", "std": "돌파봉 1.5배 이상"}, {"stage": "엔트리", "item": "T바닥 단계", "std": "1.도지~3.펌핑"}, {"stage": "엔트리", "item": "매수 타점", "std": "5개 중 1개 이상"}, {"stage": "엔트리", "item": "손절선", "std": "저점 -3% 확정"}, {"stage": "엔트리", "item": "비중", "std": "자산 5% 이하"}, {"stage": "리스크", "item": "단일 종목 상한", "std": "5% 초과 아님"}, {"stage": "리스크", "item": "섹터 집중도", "std": "30% 초과 아님"}, {"stage": "리스크", "item": "급등 경계", "std": "최근 월 50% 이상 아님"}], "entry_points": [{"no": 1, "name": "T바닥 도지", "cond": "음봉 후 도지, 5이평 근접", "score": "★★★", "return": "최상", "risk": "돌파 실패 시 재하락"}, {"no": 2, "name": "포킹 돌파봉", "cond": "장대양봉 + 거래량 1.5배", "score": "★★☆", "return": "우수", "risk": "속임수 양봉 가능"}, {"no": 3, "name": "양음양 음봉", "cond": "펌핑 중 짧은 음봉 조정", "score": "★★☆", "return": "우수", "risk": "조정 깊이 예측 난"}, {"no": 4, "name": "5이평 지지 양봉", "cond": "랠리 중 5MA 터치 후 반등", "score": "★☆☆", "return": "무난", "risk": "추세 꺾임 감지 어려움"}, {"no": 5, "name": "역매집 도지", "cond": "조정 마지막 + 거래량 감소", "score": "★★☆", "return": "우수", "risk": "추세 종결 가능성"}]};
+const SUMMARY = {"total": 65, "A": 11, "B": 31, "C": 11, "D": 12, "avg_score": 14.4, "max_stock": {"no": 63, "name": "아나패스", "market": "코스닥", "cap": 2273, "timeframe": "주봉", "ma": null, "breakout": 17900, "current": 18750, "change": 4.75, "pattern": "정배탁", "forecast": "", "note": "240이평 아래에서 세차례 노크하며 횡보 중", "theme": "반도체 재료/부품", "patScore": 8, "distScore": 10, "capScore": 4, "total": 22, "grade": "A", "stage": "1.도지", "timing": "★★★ 도지 매수"}, "watch_count": 24};
+
+// ============ Clock ============
+function updateClock() {
+  const d = new Date();
+  const s = d.toLocaleString('ko-KR', { dateStyle: 'short', timeStyle: 'medium' });
+  document.getElementById('clock').textContent = s;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ============ KPI ============
+document.getElementById('kpi-total').textContent = SUMMARY.total;
+document.getElementById('kpi-a').textContent = SUMMARY.A;
+document.getElementById('kpi-b').textContent = SUMMARY.B;
+document.getElementById('kpi-c').textContent = SUMMARY.C;
+document.getElementById('kpi-d').textContent = SUMMARY.D;
+document.getElementById('kpi-avg').textContent = SUMMARY.avg_score;
+document.getElementById('kpi-watch').textContent = SUMMARY.watch_count;
+
+// ============ Tabs ============
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('p-' + tab.dataset.tab).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+});
+
+// ============ 자체 SVG 차트 구현 (CDN 의존 제거) ============
+function renderDonut(containerId, data, colors) {
+  const cont = document.getElementById(containerId);
+  const total = data.reduce((s, d) => s + d.value, 0);
+  if (total === 0) { cont.innerHTML = '<div style="text-align:center;padding:60px;color:var(--text-3);font-family:var(--mono)">데이터 없음</div>'; return; }
+  
+  const size = 220, cx = size/2, cy = size/2, r = 80, ir = 52;
+  let angleAcc = -Math.PI/2;
+  const paths = data.map((d, i) => {
+    if (d.value === 0) return '';
+    const angle = (d.value / total) * Math.PI * 2;
+    const x1 = cx + r * Math.cos(angleAcc);
+    const y1 = cy + r * Math.sin(angleAcc);
+    const x2 = cx + r * Math.cos(angleAcc + angle);
+    const y2 = cy + r * Math.sin(angleAcc + angle);
+    const x3 = cx + ir * Math.cos(angleAcc + angle);
+    const y3 = cy + ir * Math.sin(angleAcc + angle);
+    const x4 = cx + ir * Math.cos(angleAcc);
+    const y4 = cy + ir * Math.sin(angleAcc);
+    const large = angle > Math.PI ? 1 : 0;
+    const pct = (d.value / total * 100).toFixed(1);
+    angleAcc += angle;
+    return `<path d="M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} L ${x3} ${y3} A ${ir} ${ir} 0 ${large} 0 ${x4} ${y4} Z"
+            fill="${colors[i]}" stroke="var(--bg-1)" stroke-width="2">
+            <title>${d.label}: ${d.value}개 (${pct}%)</title></path>`;
+  }).join('');
+  
+  const legend = data.map((d, i) => `
+    <div style="display:flex;align-items:center;gap:8px;font-size:12px;margin:4px 0">
+      <span style="width:10px;height:10px;background:${colors[i]};display:inline-block"></span>
+      <span style="color:var(--text-2);flex:1">${d.label}</span>
+      <span class="mono" style="color:var(--text-1);font-weight:500">${d.value}</span>
+      <span class="mono" style="color:var(--text-3);font-size:11px">${total ? (d.value/total*100).toFixed(0) : 0}%</span>
+    </div>
+  `).join('');
+  
+  cont.innerHTML = `
+    <div style="display:flex;align-items:center;gap:20px;height:100%">
+      <svg viewBox="0 0 ${size} ${size}" width="${size}" height="${size}" style="flex-shrink:0">${paths}
+        <text x="${cx}" y="${cy-4}" text-anchor="middle" font-family="var(--mono)" font-size="24" font-weight="600" fill="var(--text-1)">${total}</text>
+        <text x="${cx}" y="${cy+14}" text-anchor="middle" font-size="10" fill="var(--text-3)" font-family="var(--mono)">TOTAL</text>
+      </svg>
+      <div style="flex:1">${legend}</div>
+    </div>`;
+}
+
+function renderBars(containerId, data, colors) {
+  const cont = document.getElementById(containerId);
+  const max = Math.max(...data.map(d => d.value), 1);
+  const rows = data.map((d, i) => {
+    const w = (d.value / max * 100);
+    return `
+      <div style="display:flex;align-items:center;gap:10px;margin:6px 0">
+        <div style="width:64px;font-size:11px;font-family:var(--mono);color:var(--text-3);text-align:right;letter-spacing:0.02em">${d.label}</div>
+        <div style="flex:1;height:20px;background:var(--bg-3);position:relative">
+          <div style="height:100%;background:${colors[i] || 'var(--gold)'};width:${w}%;transition:width 0.6s cubic-bezier(0.4,0,0.2,1);position:relative">
+          </div>
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:var(--mono);font-size:11px;color:${d.value > 0 ? 'var(--text-1)' : 'var(--text-4)'};font-weight:600">${d.value}</span>
+        </div>
+      </div>`;
+  }).join('');
+  cont.innerHTML = `<div style="padding:8px 0">${rows}</div>`;
+}
+
+// ============ 등급 분포 (도넛) ============
+renderDonut('chart-grades', [
+  { label: 'A 등급 · 즉시 검토', value: SUMMARY.A },
+  { label: 'B 등급 · 적극 관찰', value: SUMMARY.B },
+  { label: 'C 등급 · 관망', value: SUMMARY.C },
+  { label: 'D 등급 · 미입력', value: SUMMARY.D },
+], ['#00D395', '#F4B942', '#F07A2E', '#6B7390']);
+
+// ============ T바닥 단계 분포 (바) ============
+const stageCounts = { '1.도지': 0, '2.포킹': 0, '3.펌핑': 0, '4.랠리': 0, '5.과열': 0, '관찰': 0, '미형성': 0 };
+DATA.stocks.forEach(s => stageCounts[s.stage] = (stageCounts[s.stage] || 0) + 1);
+
+renderBars('chart-stages', [
+  { label: '1.도지', value: stageCounts['1.도지'] },
+  { label: '2.포킹', value: stageCounts['2.포킹'] },
+  { label: '3.펌핑', value: stageCounts['3.펌핑'] },
+  { label: '4.랠리', value: stageCounts['4.랠리'] },
+  { label: '5.과열', value: stageCounts['5.과열'] },
+  { label: '관찰', value: stageCounts['관찰'] + stageCounts['미형성'] },
+], ['#00D395', '#F4B942', '#FFD477', '#8B92A8', '#F04848', '#4A5070']);
+
+// ============ 시총대 분포 (바) ============
+const capBuckets = [
+  { label: '<1천억', min: 0, max: 1000, value: 0 },
+  { label: '1~5천억', min: 1000, max: 5000, value: 0 },
+  { label: '5천~1조', min: 5000, max: 10000, value: 0 },
+  { label: '1~2조', min: 10000, max: 20000, value: 0 },
+  { label: '2~5조', min: 20000, max: 50000, value: 0 },
+  { label: '5조+', min: 50000, max: 9e9, value: 0 },
+];
+DATA.stocks.forEach(s => {
+  const b = capBuckets.find(b => s.cap >= b.min && s.cap < b.max);
+  if (b) b.value++;
+});
+renderBars('chart-caps', capBuckets, Array(6).fill('#F4B942'));
+
+// ============ Top 10 ============
+function renderTopList() {
+  const top = [...DATA.stocks].sort((a, b) => b.total - a.total).slice(0, 10);
+  document.getElementById('top-list').innerHTML = top.map((s, i) => `
+    <div class="top-item" data-id="${s.no}">
+      <div class="top-rank">${String(i+1).padStart(2,'0')}</div>
+      <div>
+        <div class="top-name">${s.name}</div>
+        <div class="top-sub">${s.pattern || '—'} · ${s.stage}</div>
+      </div>
+      <div class="grade ${s.grade}">${s.grade}</div>
+      <div class="top-change ${s.change > 0 ? 'up' : ''}">${s.change !== null ? s.change.toFixed(1)+'%' : '—'}</div>
+    </div>
+  `).join('');
+}
+
+function renderBuyList() {
+  const buy = DATA.stocks.filter(s => ['1.도지','2.포킹','3.펌핑'].includes(s.stage))
+                         .sort((a, b) => b.total - a.total).slice(0, 10);
+  document.getElementById('buy-list').innerHTML = buy.map(s => {
+    const stageNum = s.stage.charAt(0);
+    return `
+      <div class="top-item" data-id="${s.no}">
+        <div class="top-rank">${s.no}</div>
+        <div>
+          <div class="top-name">${s.name}</div>
+          <div class="top-sub">${s.timing}</div>
+        </div>
+        <span class="stage-pill" data-stage="${stageNum}">${s.stage}</span>
+        <div class="top-change up">${s.change !== null ? '+'+s.change.toFixed(1)+'%' : '—'}</div>
+      </div>
+    `;
+  }).join('');
+}
+renderTopList();
+renderBuyList();
+
+// ============ Screening Table ============
+const state = {
+  search: '',
+  grade: 'all',
+  stageFilter: 'all',
+  sortKey: 'total',
+  sortAsc: false,
+};
+
+function renderTable() {
+  let rows = DATA.stocks.filter(s => {
+    if (state.search && !s.name.toLowerCase().includes(state.search.toLowerCase())) return false;
+    if (state.grade !== 'all' && s.grade !== state.grade) return false;
+    if (state.stageFilter !== 'all') {
+      const stageN = s.stage.charAt(0);
+      if (stageN !== state.stageFilter) return false;
+    }
+    return true;
+  });
+
+  const dir = state.sortAsc ? 1 : -1;
+  rows.sort((a, b) => {
+    let va = a[state.sortKey], vb = b[state.sortKey];
+    if (va === null || va === undefined) va = state.sortAsc ? Infinity : -Infinity;
+    if (vb === null || vb === undefined) vb = state.sortAsc ? Infinity : -Infinity;
+    if (typeof va === 'string') return va.localeCompare(vb) * dir;
+    return (va - vb) * dir;
+  });
+
+  document.getElementById('stock-tbody').innerHTML = rows.map(s => {
+    const stageN = s.stage.charAt(0).match(/\d/) ? s.stage.charAt(0) : '0';
+    const timingPrio = s.timing.includes('★★★') ? 'high' : (s.timing.includes('☆☆☆') ? 'skip' : 'normal');
+    return `
+      <tr>
+        <td class="mono" style="color:var(--text-4)">${String(s.no).padStart(2,'0')}</td>
+        <td style="font-weight:500">${s.name}</td>
+        <td style="color:var(--text-3);font-family:var(--mono);font-size:11px">${s.market}</td>
+        <td class="cell-num">${s.cap.toLocaleString()}</td>
+        <td>${s.pattern ? `<span class="pattern-tag">${s.pattern}</span>` : '<span style="color:var(--text-4)">—</span>'}</td>
+        <td class="cell-num cell-change ${s.change > 0 ? 'up' : ''}">${s.change !== null ? (s.change > 0 ? '+' : '')+s.change.toFixed(2)+'%' : '—'}</td>
+        <td><span class="stage-pill" data-stage="${stageN}">${s.stage}</span></td>
+        <td class="cell-num cell-score" style="color:${s.total >= 20 ? 'var(--grade-a)' : s.total >= 15 ? 'var(--grade-b)' : s.total >= 10 ? 'var(--grade-c)' : 'var(--grade-d)'}">${s.total}</td>
+        <td><span class="grade ${s.grade}">${s.grade}</span></td>
+        <td><span class="timing-text" data-priority="${timingPrio}">${s.timing}</span></td>
+      </tr>
+    `;
+  }).join('');
+
+  // header sort indicators
+  document.querySelectorAll('#stock-table th').forEach(th => {
+    th.classList.remove('sorted', 'asc');
+    if (th.dataset.sort === state.sortKey) {
+      th.classList.add('sorted');
+      if (state.sortAsc) th.classList.add('asc');
+    }
+  });
+}
+renderTable();
+
+document.getElementById('search-box').addEventListener('input', e => {
+  state.search = e.target.value;
+  renderTable();
+});
+
+document.querySelectorAll('[data-filter-grade]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-filter-grade]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.grade = btn.dataset.filterGrade;
+    renderTable();
+  });
+});
+
+document.querySelectorAll('[data-filter-stage]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-filter-stage]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    state.stageFilter = btn.dataset.filterStage;
+    renderTable();
+  });
+});
+
+document.querySelectorAll('#stock-table th[data-sort]').forEach(th => {
+  th.addEventListener('click', () => {
+    if (state.sortKey === th.dataset.sort) {
+      state.sortAsc = !state.sortAsc;
+    } else {
+      state.sortKey = th.dataset.sort;
+      state.sortAsc = false;
+    }
+    renderTable();
+  });
+});
+
+// ============ T-Bottom Chart (inline SVG) ============
+const SVG_CHART = `<svg width="100%" viewBox="0 0 680 520" xmlns="http://www.w3.org/2000/svg" role="img" style="font-family:'Pretendard',sans-serif">
+<text x="40" y="28" font-size="14" font-weight="600" fill="#E8EAED">T바닥 진행 사이클과 5개 매수 타점</text>
+<line x1="40" y1="60" x2="40" y2="360" stroke="#6B7390" stroke-width="0.5" opacity="0.3"/>
+<line x1="40" y1="360" x2="640" y2="360" stroke="#6B7390" stroke-width="0.5" opacity="0.3"/>
+<text x="35" y="64" font-size="12" fill="#A0A7C0" text-anchor="end">115</text>
+<text x="35" y="138" font-size="12" fill="#A0A7C0" text-anchor="end">105</text>
+<text x="35" y="210" font-size="12" fill="#A0A7C0" text-anchor="end">95</text>
+<text x="35" y="284" font-size="12" fill="#A0A7C0" text-anchor="end">85</text>
+<text x="35" y="358" font-size="12" fill="#A0A7C0" text-anchor="end">75</text>
+<rect x="60" y="50" width="150" height="310" fill="#3B8BD4" opacity="0.06" data-zone="1"/>
+<text x="135" y="74" font-size="12" fill="#7DADE0" text-anchor="middle">1. 하락 매도세</text>
+<rect x="210" y="50" width="110" height="310" fill="#F4B942" opacity="0.08" data-zone="2"/>
+<text x="265" y="74" font-size="12" fill="#FFD477" text-anchor="middle">2. T바닥·포킹</text>
+<rect x="320" y="50" width="130" height="310" fill="#F04848" opacity="0.06" data-zone="3"/>
+<text x="385" y="74" font-size="12" fill="#FF8080" text-anchor="middle">3. 펌핑·랠리</text>
+<rect x="450" y="50" width="110" height="310" fill="#EF9F27" opacity="0.08" data-zone="4"/>
+<text x="505" y="74" font-size="12" fill="#FFC77A" text-anchor="middle">4. 역매집</text>
+<rect x="560" y="50" width="80" height="310" fill="#F04848" opacity="0.06" data-zone="5"/>
+<text x="600" y="74" font-size="12" fill="#FF8080" text-anchor="middle">5. 재랠리</text>
+<g fill="#3B8BD4">
+<line x1="60" y1="92" x2="68" y2="92" stroke="#6B7390" stroke-width="1"/><line x1="60" y1="148" x2="68" y2="148" stroke="#6B7390" stroke-width="1"/><rect x="58" y="92" width="10" height="56"/>
+<line x1="88" y1="148" x2="96" y2="148" stroke="#6B7390" stroke-width="1"/><line x1="88" y1="200" x2="96" y2="200" stroke="#6B7390" stroke-width="1"/><rect x="86" y="148" width="10" height="52"/>
+<line x1="116" y1="200" x2="124" y2="200" stroke="#6B7390" stroke-width="1"/><line x1="116" y1="236" x2="124" y2="236" stroke="#6B7390" stroke-width="1"/><rect x="114" y="200" width="10" height="36"/>
+<line x1="144" y1="236" x2="152" y2="236" stroke="#6B7390" stroke-width="1"/><line x1="144" y1="260" x2="152" y2="260" stroke="#6B7390" stroke-width="1"/><rect x="142" y="236" width="10" height="24"/>
+<line x1="172" y1="260" x2="180" y2="260" stroke="#6B7390" stroke-width="1"/><line x1="172" y1="296" x2="180" y2="296" stroke="#6B7390" stroke-width="1"/><rect x="170" y="260" width="10" height="36"/>
+<line x1="200" y1="296" x2="208" y2="296" stroke="#6B7390" stroke-width="1"/><line x1="200" y1="344" x2="208" y2="344" stroke="#6B7390" stroke-width="1"/><rect x="198" y="296" width="10" height="48"/>
+</g>
+<line x1="226" y1="340" x2="234" y2="340" stroke="#6B7390" stroke-width="1"/><line x1="226" y1="354" x2="234" y2="354" stroke="#6B7390" stroke-width="1"/><rect x="224" y="340" width="10" height="2" fill="#E8EAED"/>
+<line x1="230" y1="330" x2="230" y2="358" stroke="#6B7390" stroke-width="1"/>
+<line x1="254" y1="340" x2="262" y2="340" stroke="#6B7390" stroke-width="1"/><line x1="254" y1="350" x2="262" y2="350" stroke="#6B7390" stroke-width="1"/><rect x="252" y="340" width="10" height="10" fill="#3B8BD4"/>
+<line x1="282" y1="336" x2="290" y2="336" stroke="#6B7390" stroke-width="1"/><line x1="282" y1="352" x2="290" y2="352" stroke="#6B7390" stroke-width="1"/><rect x="280" y="336" width="10" height="16" fill="#3B8BD4"/>
+<line x1="310" y1="196" x2="318" y2="196" stroke="#6B7390" stroke-width="1"/><line x1="310" y1="340" x2="318" y2="340" stroke="#6B7390" stroke-width="1"/><rect x="308" y="196" width="10" height="144" fill="#F04848"/>
+<line x1="338" y1="184" x2="346" y2="184" stroke="#6B7390" stroke-width="1"/><line x1="338" y1="224" x2="346" y2="224" stroke="#6B7390" stroke-width="1"/><rect x="336" y="184" width="10" height="40" fill="#F04848"/>
+<line x1="366" y1="184" x2="374" y2="184" stroke="#6B7390" stroke-width="1"/><line x1="366" y1="212" x2="374" y2="212" stroke="#6B7390" stroke-width="1"/><rect x="364" y="184" width="10" height="28" fill="#3B8BD4"/>
+<line x1="394" y1="142" x2="402" y2="142" stroke="#6B7390" stroke-width="1"/><line x1="394" y1="212" x2="402" y2="212" stroke="#6B7390" stroke-width="1"/><rect x="392" y="142" width="10" height="70" fill="#F04848"/>
+<line x1="422" y1="126" x2="430" y2="126" stroke="#6B7390" stroke-width="1"/><line x1="422" y1="142" x2="430" y2="142" stroke="#6B7390" stroke-width="1"/><rect x="420" y="126" width="10" height="16" fill="#F04848"/>
+<line x1="450" y1="112" x2="458" y2="112" stroke="#6B7390" stroke-width="1"/><line x1="450" y1="126" x2="458" y2="126" stroke="#6B7390" stroke-width="1"/><rect x="448" y="112" width="10" height="14" fill="#F04848"/>
+<line x1="478" y1="112" x2="486" y2="112" stroke="#6B7390" stroke-width="1"/><line x1="478" y1="140" x2="486" y2="140" stroke="#6B7390" stroke-width="1"/><rect x="476" y="112" width="10" height="28" fill="#3B8BD4"/>
+<line x1="506" y1="140" x2="514" y2="140" stroke="#6B7390" stroke-width="1"/><line x1="506" y1="164" x2="514" y2="164" stroke="#6B7390" stroke-width="1"/><rect x="504" y="140" width="10" height="24" fill="#3B8BD4"/>
+<line x1="534" y1="156" x2="542" y2="156" stroke="#6B7390" stroke-width="1"/><line x1="534" y1="170" x2="542" y2="170" stroke="#6B7390" stroke-width="1"/><rect x="532" y="156" width="10" height="2" fill="#E8EAED"/>
+<line x1="538" y1="150" x2="538" y2="174" stroke="#6B7390" stroke-width="1"/>
+<line x1="562" y1="80" x2="570" y2="80" stroke="#6B7390" stroke-width="1"/><line x1="562" y1="160" x2="570" y2="160" stroke="#6B7390" stroke-width="1"/><rect x="560" y="80" width="10" height="80" fill="#F04848"/>
+<line x1="590" y1="60" x2="598" y2="60" stroke="#6B7390" stroke-width="1"/><line x1="590" y1="82" x2="598" y2="82" stroke="#6B7390" stroke-width="1"/><rect x="588" y="60" width="10" height="22" fill="#F04848"/>
+<line x1="618" y1="54" x2="626" y2="54" stroke="#6B7390" stroke-width="1"/><line x1="618" y1="62" x2="626" y2="62" stroke="#6B7390" stroke-width="1"/><rect x="616" y="54" width="10" height="8" fill="#F04848"/>
+<path d="M64,120 L92,170 L120,216 L148,250 L176,280 L204,318 L232,340 L260,336 L288,322 L316,268 L344,220 L372,204 L400,180 L428,152 L456,134 L484,130 L512,142 L540,156 L568,128 L596,94 L624,66" fill="none" stroke="#F4B942" stroke-width="1.8" opacity="0.9" stroke-linejoin="round"/>
+<path d="M64,100 L92,160 L120,210 L148,240 L176,265 L204,305 L232,335 L260,334 L288,324 L316,280 L344,250 L372,230 L400,210 L428,190 L456,170 L484,165 L512,168 L540,175 L568,162 L596,140 L624,120" fill="none" stroke="#7F77DD" stroke-width="1.4" opacity="0.8" stroke-dasharray="4 3" stroke-linejoin="round"/>
+<g class="ep" data-ep="1" style="cursor:pointer">
+  <circle cx="230" cy="340" r="14" fill="#2C1F0A" stroke="#F4B942" stroke-width="2"/>
+  <text x="230" y="344" font-size="14" font-weight="700" fill="#F4B942" text-anchor="middle">1</text>
+</g>
+<g class="ep" data-ep="2" style="cursor:pointer">
+  <circle cx="313" cy="196" r="14" fill="#2C1F0A" stroke="#F4B942" stroke-width="2"/>
+  <text x="313" y="200" font-size="14" font-weight="700" fill="#F4B942" text-anchor="middle">2</text>
+</g>
+<g class="ep" data-ep="3" style="cursor:pointer">
+  <circle cx="369" cy="198" r="14" fill="#2C1F0A" stroke="#F4B942" stroke-width="2"/>
+  <text x="369" y="202" font-size="14" font-weight="700" fill="#F4B942" text-anchor="middle">3</text>
+</g>
+<g class="ep" data-ep="4" style="cursor:pointer">
+  <circle cx="425" cy="134" r="14" fill="#2C1F0A" stroke="#F4B942" stroke-width="2"/>
+  <text x="425" y="138" font-size="14" font-weight="700" fill="#F4B942" text-anchor="middle">4</text>
+</g>
+<g class="ep" data-ep="5" style="cursor:pointer">
+  <circle cx="537" cy="162" r="14" fill="#2C1F0A" stroke="#F4B942" stroke-width="2"/>
+  <text x="537" y="166" font-size="14" font-weight="700" fill="#F4B942" text-anchor="middle">5</text>
+</g>
+<line x1="540" y1="380" x2="560" y2="380" stroke="#F4B942" stroke-width="1.8"/>
+<text x="565" y="384" font-size="12" fill="#A0A7C0">5이평</text>
+<line x1="540" y1="396" x2="560" y2="396" stroke="#7F77DD" stroke-width="1.4" stroke-dasharray="4 3"/>
+<text x="565" y="400" font-size="12" fill="#A0A7C0">20이평</text>
+<text x="40" y="430" font-size="12" fill="#A0A7C0">진행 순서: T바닥 → 펌핑 → 도지 → 양음양 → 랠리 → 역매집 → 재펌핑</text>
+<text x="40" y="450" font-size="11" fill="#6B7390">* 각 번호 원을 클릭하면 오른쪽 상세 설명이 활성화됩니다.</text>
+</svg>`;
+
+document.getElementById('chart-svg-box').innerHTML = SVG_CHART;
+
+// render entry point cards
+document.getElementById('entry-list').innerHTML = DATA.entry_points.map(e => `
+  <div class="entry-card" data-ep="${e.no}">
+    <div class="entry-card-head">
+      <div class="entry-no">${e.no}</div>
+      <div class="entry-name">${e.name}</div>
+    </div>
+    <div class="entry-cond">${e.cond}</div>
+    <div class="entry-meta">
+      <span>평가 <b>${e.score}</b></span>
+      <span>기대수익 <b>${e.return}</b></span>
+    </div>
+    <div style="margin-top:6px;font-size:11px;color:var(--red);font-family:var(--mono)">RISK: ${e.risk}</div>
+  </div>
+`).join('');
+
+// interactive hover/click
+function focusEntry(no) {
+  document.querySelectorAll('.entry-card').forEach(c => c.classList.remove('focused'));
+  document.querySelectorAll('.ep circle').forEach(c => c.setAttribute('r', '14'));
+  if (!no) return;
+  const card = document.querySelector(`.entry-card[data-ep="${no}"]`);
+  const point = document.querySelector(`.ep[data-ep="${no}"] circle`);
+  if (card) card.classList.add('focused');
+  if (point) point.setAttribute('r', '18');
+}
+document.querySelectorAll('.ep').forEach(ep => {
+  ep.addEventListener('click', () => focusEntry(ep.dataset.ep));
+});
+document.querySelectorAll('.entry-card').forEach(card => {
+  card.addEventListener('click', () => focusEntry(card.dataset.ep));
+});
+
+// ============ Patterns ============
+function renderPatterns(cat='all') {
+  const filtered = cat === 'all' ? DATA.patterns : DATA.patterns.filter(p => p.category === cat);
+  document.getElementById('pattern-grid').innerHTML = filtered.map(p => `
+    <div class="pattern-card" data-cat="${p.category}">
+      <div class="pattern-head">
+        <div class="pattern-name">${p.name}</div>
+        <span class="pattern-cat">${p.category}</span>
+      </div>
+      <div class="pattern-score-text">가중치 ${p.score}/9</div>
+      <div class="pattern-score-bar">
+        <div class="pattern-score-fill" style="width:${p.score/9*100}%"></div>
+      </div>
+      <div class="pattern-desc">${p.desc}</div>
+      <div class="pattern-entry">→ ${p.entry}</div>
+      <div class="pattern-examples"><b>예시</b> · ${p.examples}</div>
+    </div>
+  `).join('');
+}
+renderPatterns();
+
+document.querySelectorAll('[data-filter-cat]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-filter-cat]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderPatterns(btn.dataset.filterCat);
+  });
+});
+
+// ============ Themes ============
+document.getElementById('theme-grid').innerHTML = DATA.themes.map(t => `
+  <div class="theme-card" data-theme="${t.name}">
+    <div class="theme-bar" style="background:${t.color}"></div>
+    <div class="theme-head">
+      <div>
+        <div class="theme-name">${t.name}</div>
+        <div class="theme-cycle">${t.cycle}</div>
+      </div>
+      <div class="theme-priority ${t.priority}">${t.priority}</div>
+    </div>
+    <div class="theme-subs">
+      ${t.subs.map(s => `<span class="theme-sub">${s}</span>`).join('')}
+    </div>
+  </div>
+`).join('');
+
+// ============ Searches (HTS) ============
+document.getElementById('search-list').innerHTML = DATA.searches.map(s => `
+  <div class="search-card" data-search="${s.no}">
+    <div class="search-head">
+      <div class="search-no">S${String(s.no).padStart(2,'0')}</div>
+      <div class="search-info">
+        <div class="search-title">${s.title}</div>
+        <div class="search-desc">${s.desc}</div>
+      </div>
+      <div class="search-toggle">+</div>
+    </div>
+    <div class="search-body">
+      <div class="search-criteria">
+        ${s.criteria.map(c => `<div>${c[0]}</div><div>${c[1]}</div>`).join('')}
+      </div>
+    </div>
+  </div>
+`).join('');
+
+document.querySelectorAll('.search-head').forEach(h => {
+  h.addEventListener('click', () => {
+    h.parentElement.classList.toggle('open');
+  });
+});
+
+// ============ Checklist ============
+const checkState = new Array(DATA.checklist.length).fill(false);
+
+function renderChecklist() {
+  const grouped = {};
+  DATA.checklist.forEach((c, i) => {
+    if (!grouped[c.stage]) grouped[c.stage] = [];
+    grouped[c.stage].push({ ...c, idx: i });
+  });
+
+  document.getElementById('check-groups').innerHTML = Object.entries(grouped).map(([stage, items]) => {
+    const passed = items.filter(it => checkState[it.idx]).length;
+    return `
+      <div class="check-group">
+        <div class="check-group-head">
+          <span>${stage}</span>
+          <span class="check-group-count">${passed} / ${items.length}</span>
+        </div>
+        ${items.map(it => `
+          <div class="check-item ${checkState[it.idx] ? 'checked' : ''}" data-idx="${it.idx}">
+            <div class="checkbox"></div>
+            <div class="check-label">${it.item}</div>
+            <div class="check-std">${it.std}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+
+  document.querySelectorAll('.check-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const idx = parseInt(el.dataset.idx);
+      checkState[idx] = !checkState[idx];
+      renderChecklist();
+      updateVerdict();
+    });
+  });
+}
+
+function updateVerdict() {
+  const passed = checkState.filter(v => v).length;
+  const total = DATA.checklist.length;
+  const pct = (passed / total) * 100;
+  document.getElementById('v-num').textContent = passed;
+  document.getElementById('v-pct').textContent = pct.toFixed(0);
+  document.getElementById('v-meter').style.width = pct + '%';
+
+  const v = document.getElementById('v-verdict');
+  if (passed >= 16) { v.textContent = '★ 매수'; v.dataset.verdict = 'buy'; }
+  else if (passed >= 12) { v.textContent = '관찰'; v.dataset.verdict = 'watch'; }
+  else { v.textContent = '유보'; v.dataset.verdict = 'hold'; }
+}
+renderChecklist();
+updateVerdict();
+
+document.getElementById('reset-btn').addEventListener('click', () => {
+  checkState.fill(false);
+  renderChecklist();
+  updateVerdict();
+});
+
+// ============ Init ============
+console.log('%c Chart Master Terminal ', 'background:#F4B942;color:#070A14;font-weight:700;padding:4px 8px');
+console.log('Loaded ' + DATA.stocks.length + ' stocks. A:' + SUMMARY.A + ' B:' + SUMMARY.B + ' C:' + SUMMARY.C + ' D:' + SUMMARY.D);
+</script>
+</body>
+</html>
