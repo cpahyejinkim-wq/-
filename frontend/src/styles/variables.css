@@ -1,0 +1,29 @@
+:root {
+  --bg-0: #070A14;
+  --bg-1: #0E1324;
+  --bg-2: #151B30;
+  --bg-3: #1C2340;
+  --border: #262E4A;
+  --border-soft: #1F2640;
+  --text-1: #E8EAED;
+  --text-2: #A0A7C0;
+  --text-3: #6B7390;
+  --text-4: #4A5070;
+  --gold: #F4B942;
+  --gold-d: #C08D24;
+  --gold-soft: #FFD477;
+  --up: #F04848;
+  --down: #3B8BD4;
+  --green: #00D395;
+  --red: #F04848;
+  --warn: #F07A2E;
+  --grade-a: #00D395;
+  --grade-b: #F4B942;
+  --grade-c: #F07A2E;
+  --grade-d: #6B7390;
+
+  --mono: 'JetBrains Mono', 'SF Mono', 'Menlo', 'Monaco', 'Consolas', monospace;
+  --sans: 'Pretendard', 'Pretendard Variable', -apple-system, BlinkMacSystemFont,
+          'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕',
+          'Noto Sans KR', 'Noto Sans CJK KR', sans-serif;
+}

@@ -1,0 +1,33 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html, body {
+  background: var(--bg-0);
+  color: var(--text-1);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+}
+
+body {
+  background-image:
+    radial-gradient(circle at 20% 10%, rgba(244, 185, 66, 0.04) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(59, 139, 212, 0.03) 0%, transparent 40%);
+  background-attachment: fixed;
+}
+
+.mono { font-family: var(--mono); font-feature-settings: 'tnum' 1; }
+
+button, input, select { font-family: inherit; }
+
+input:focus, button:focus { outline: none; }
+
+button { cursor: pointer; background: none; border: none; color: inherit; }
+
+a { color: var(--gold); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--bg-1); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }

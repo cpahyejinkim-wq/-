@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chart Master Terminal · 차트마스터반 투자 대시보드</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="src/styles/variables.css">
+<link rel="stylesheet" href="src/styles/base.css">
+<link rel="stylesheet" href="src/styles/layout.css">
+<link rel="stylesheet" href="src/styles/components.css">
+
+<style>
+  /* Stage badge CSS — Korean class names need special handling */
+  [class*="stage-T바닥"]       { background: rgba(59,139,212,.15); color: var(--down);   }
+  [class*="stage-포킹"]        { background: rgba(0,211,149,.15);  color: var(--green);  }
+  [class*="stage-펌핑"]        { background: rgba(244,185,66,.15); color: var(--gold);   }
+  [class*="stage-랠리"]        { background: rgba(244,185,66,.1);  color: var(--gold-soft);}
+  [class*="stage-역배열재매집"] { background: rgba(160,108,255,.12);color: #C5A4FF;       }
+  [class*="stage-재랠리"]      { background: rgba(0,211,149,.12);  color: var(--green);  }
+  [class*="stage-과열"]        { background: rgba(240,72,72,.15);  color: var(--red);    }
+  [class*="stage-관찰"]        { background: var(--bg-3);          color: var(--text-3); }
+</style>
+</head>
+<body>
+
+<!-- ======== Header ======== -->
+<header class="header">
+  <div class="header-top">
+    <div class="brand">
+      <div class="brand-mark">C</div>
+      <div class="brand-text">
+        <h1>CHART <span>MASTER</span> TERMINAL</h1>
+        <p>차트마스터반 · 교재 철학 기반 AI 투자 분석 대시보드</p>
+      </div>
+    </div>
+    <div class="status-strip">
+      <div class="status-dot"></div>
+      <div class="status-item"><b id="mode-label">MOCK</b> 모드</div>
+      <div class="status-item">엔진 v0.1.0</div>
+      <div class="status-item" id="health-status" style="color:var(--text-4)">연결 확인 중…</div>
+    </div>
+  </div>
+</header>
+
+<!-- ======== Main ======== -->
+<main class="main">
+
+  <!-- Search -->
+  <div id="search-mount"></div>
+
+  <!-- Loading -->
+  <div id="loading" class="loading-state" style="display:none">
+    ⟳ 분석 중… 잠시만 기다려주세요
+  </div>
+
+  <!-- Error -->
+  <div id="error" class="error-state" style="display:none"></div>
+
+  <!-- Empty -->
+  <div id="empty" class="empty-state">
+    <div style="font-size:32px;margin-bottom:12px">📊</div>
+    <div style="font-size:16px;color:var(--text-2);margin-bottom:6px">종목명을 입력해 분석을 시작하세요</div>
+    <div style="font-size:12px;color:var(--text-4)">
+      기술적 구조 · 흐름 단계 · 멀티 타임프레임 · 펀더멘털 · 테마 · 리스크 · 매매 플랜을 자동 생성합니다
+    </div>
+    <div style="margin-top:20px;font-size:11px;color:var(--text-4);font-family:var(--mono)">
+      Phase 1: Mock 데이터 (샘플반도체 / 샘플바이오 / 샘플2차전지 / 샘플조선 / 샘플AI)
+    </div>
+  </div>
+
+  <!-- Results (hidden until first analysis) -->
+  <div id="results" style="display:none;display:flex;flex-direction:column;gap:20px">
+
+    <!-- Summary -->
+    <div id="summary-mount"></div>
+
+    <!-- Row: Score / Stage / Timeframe -->
+    <div class="grid-3">
+      <div id="breakdown-mount"></div>
+      <div id="stage-mount"></div>
+      <div id="tf-mount"></div>
+    </div>
+
+    <!-- Trade Plan (full width) -->
+    <div id="trade-mount"></div>
+
+    <!-- Row: Patterns / Theme+Fundamental -->
+    <div class="grid-2">
+      <div id="pattern-mount"></div>
+      <div id="theme-mount"></div>
+    </div>
+
+    <!-- Row: Risk / News -->
+    <div class="grid-2">
+      <div id="risk-mount"></div>
+      <div id="news-mount"></div>
+    </div>
+
+  </div><!-- /results -->
+
+</main>
+
+<script type="module" src="src/main.js"></script>
+
+<script>
+  // Health check + mode label
+  (async () => {
+    try {
+      const BASE = (typeof localStorage !== 'undefined' && localStorage.getItem('BASE_URL')) || '';
+      const r = await fetch(BASE + '/api/health');
+      const j = await r.json();
+      document.getElementById('health-status').textContent = '● 백엔드 연결됨';
+      document.getElementById('health-status').style.color = 'var(--green)';
+    } catch {
+      document.getElementById('health-status').textContent = '● 백엔드 오프라인';
+      document.getElementById('health-status').style.color = 'var(--red)';
+    }
+  })();
+</script>
+
+</body>
+</html>
