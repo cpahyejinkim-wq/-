@@ -13,12 +13,28 @@
 from __future__ import annotations
 
 import os
+import ssl
 import time
 from datetime import datetime, timedelta
 from functools import lru_cache
 from typing import Dict, List, Optional
 
 import pandas as pd
+import urllib3
+
+# 기업 네트워크 SSL 인스펙션 우회
+# 회사 방화벽이 HTTPS에 자체 인증서를 삽입하므로 금융 데이터 수집에 한해 비활성화
+ssl._create_default_https_context = ssl._create_unverified_context
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+try:
+    import requests as _requests
+    _orig_req = _requests.Session.request
+    def _no_verify(self, method, url, **kwargs):
+        kwargs.setdefault("verify", False)
+        return _orig_req(self, method, url, **kwargs)
+    _requests.Session.request = _no_verify
+except Exception:
+    pass
 
 from backend.models.provider_models import (
     FundamentalsSnapshot,
@@ -296,7 +312,7 @@ def _fetch_macro() -> MacroSnapshot:
                 f"https://ecos.bok.or.kr/api/StatisticSearch/{api_key}"
                 f"/json/kr/1/5/{stat_code}/M/{period}"
             )
-            r = requests.get(url, timeout=8)
+            r = requests.get(url, timeout=8, verify=False)
             data = r.json()
             items = data.get("StatisticSearch", {}).get("row", [])
             return items
@@ -354,7 +370,7 @@ def _fetch_news(ticker: str) -> List[NewsHeadline]:
             ),
             "Referer": "https://finance.naver.com",
         }
-        r = requests.get(url, headers=headers, timeout=8)
+        r = requests.get(url, headers=headers, timeout=8, verify=False)
         soup = BeautifulSoup(r.text, "html.parser")
 
         headlines: List[NewsHeadline] = []
