@@ -6,6 +6,14 @@ Run locally:
 from __future__ import annotations
 
 import os
+from pathlib import Path
+
+# .env 파일 자동 로드 (프로젝트 루트)
+try:
+    from dotenv import load_dotenv
+    load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+except ImportError:
+    pass
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,8 +28,8 @@ logger = get_logger("app")
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Chart Master Terminal",
-        description="PDF-철학 기반 한국 주식 분석 대시보드 (Phase 1 mock mode)",
-        version="0.1.0",
+        description="PDF-철학 기반 한국 주식 분석 대시보드",
+        version="0.2.0",
     )
 
     origins_env = os.environ.get(
