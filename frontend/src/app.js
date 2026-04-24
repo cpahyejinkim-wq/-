@@ -8,6 +8,7 @@ import * as PatternPanel      from './components/PatternPanel.js';
 import * as ThemeStrengthCard from './components/ThemeStrengthCard.js';
 import * as RiskPanel         from './components/RiskPanel.js';
 import * as NewsPanel         from './components/NewsPanel.js';
+import * as CandleChart       from './components/CandleChart.js';
 
 // ---- DOM refs (populated in mount) ----
 let els = {};
@@ -15,6 +16,7 @@ let els = {};
 export function mount() {
   els = {
     search:    document.getElementById('search-mount'),
+    chart:     document.getElementById('chart-mount'),
     summary:   document.getElementById('summary-mount'),
     breakdown: document.getElementById('breakdown-mount'),
     stage:     document.getElementById('stage-mount'),
@@ -28,6 +30,7 @@ export function mount() {
     empty:     document.getElementById('empty'),
     loading:   document.getElementById('loading'),
     error:     document.getElementById('error'),
+    modeLabel: document.getElementById('mode-label'),
   };
 
   SearchBar.mount(els.search, {
@@ -73,6 +76,15 @@ function handleAnalysis(data, errMsg) {
 }
 
 function renderAll(data) {
+  // 모드 라벨 업데이트 (MOCK / LIVE)
+  if (els.modeLabel && data.meta?.mode) {
+    els.modeLabel.textContent = data.meta.mode.toUpperCase();
+    els.modeLabel.style.color = data.meta.mode === 'live' ? 'var(--green)' : 'var(--gold)';
+  }
+
+  // 차트 (DOM이 먼저 있어야 하므로 결과 div를 보여준 뒤 mount)
+  requestAnimationFrame(() => CandleChart.mount(els.chart, data));
+
   els.summary.innerHTML   = SummaryCard.render(data);
   els.breakdown.innerHTML = ScoreBreakdown.render(data);
   els.stage.innerHTML     = StageFlowCard.render(data);

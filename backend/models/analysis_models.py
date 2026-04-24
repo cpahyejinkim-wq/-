@@ -146,6 +146,15 @@ class NewsItem(BaseModel):
     sentiment: Optional[Literal["positive", "neutral", "negative"]] = None
 
 
+class OHLCVBar(BaseModel):
+    date: str
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+
+
 class AnalysisResponse(BaseModel):
     stock: StockInfo
     market_data: MarketData
@@ -158,6 +167,7 @@ class AnalysisResponse(BaseModel):
     trade_plan: TradePlan
     final_decision: FinalDecision
     news: List[NewsItem] = Field(default_factory=list)
+    candles: List[OHLCVBar] = Field(default_factory=list)
     meta: dict = Field(default_factory=dict)  # mode, generated_at, engine_version
 
 

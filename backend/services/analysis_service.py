@@ -30,6 +30,7 @@ from backend.models.analysis_models import (
     AnalyzeRequest,
     MarketData,
     NewsItem,
+    OHLCVBar,
     StockInfo,
     TechnicalAnalysis,
 )
@@ -105,6 +106,18 @@ class AnalysisService:
         prev_close = daily["close"].iloc[-2] if len(daily) >= 2 else last_bar["close"]
         change_pct = (last_bar["close"] - prev_close) / prev_close * 100.0 if prev_close else 0.0
 
+        candles = [
+            OHLCVBar(
+                date=pd.Timestamp(ts).date().isoformat(),
+                open=round(float(row["open"]), 2),
+                high=round(float(row["high"]), 2),
+                low=round(float(row["low"]), 2),
+                close=round(float(row["close"]), 2),
+                volume=int(row["volume"]),
+            )
+            for ts, row in daily.tail(120).iterrows()
+        ]
+
         return AnalysisResponse(
             stock=StockInfo(
                 name=meta.name, ticker=meta.ticker, market=meta.market,
@@ -136,6 +149,7 @@ class AnalysisService:
             risk_analysis=risk_engine.to_risk_analysis(risk),
             trade_plan=plan,
             final_decision=scoring_engine.to_final_decision(final),
+            candles=candles,
             news=[
                 NewsItem(
                     title=n.title, url=n.url, source=n.source,

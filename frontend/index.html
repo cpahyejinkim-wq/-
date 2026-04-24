@@ -76,6 +76,17 @@
   <!-- Results (hidden until first analysis) -->
   <div id="results" style="display:none;display:flex;flex-direction:column;gap:20px">
 
+    <!-- Candle Chart -->
+    <div class="panel" style="padding:16px 16px 8px">
+      <div style="font-size:11px;color:var(--text-4);margin-bottom:8px;font-family:var(--mono)">
+        일봉 캔들차트 &nbsp;|&nbsp;
+        <span style="color:#F4B942">━ MA5</span> &nbsp;
+        <span style="color:#FF8C42">━ MA20</span> &nbsp;
+        <span style="color:#A78BFA">━ MA60</span>
+      </div>
+      <div id="chart-mount" style="width:100%"></div>
+    </div>
+
     <!-- Summary -->
     <div id="summary-mount"></div>
 
@@ -105,6 +116,7 @@
 
 </main>
 
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
 <script type="module" src="src/main.js"></script>
 
 <script>
